@@ -1,0 +1,12 @@
+linters-settings:
+  custom:
+    n1-h:
+      type: module
+      description: "n1-h is a tool to find N+1 problem with github.com/jmoiron/sqlx"
+
+linters:
+  enable:
+    - n1-h
+
+issues:
+  max-same-issues: 0
