@@ -87,7 +87,7 @@ type Coupon struct {
 }
 
 type TotalDistance struct {
-	ChairID   string    `h.db:"chair_id"`
-	Distance  int       `h.db:"distance"`
-	CreatedAt time.Time `h.db:"created_at"`
+	ChairID   string    `db:"chair_id"`
+	Distance  int       `db:"distance"`
+	CreatedAt time.Time `db:"created_at"`
 }
