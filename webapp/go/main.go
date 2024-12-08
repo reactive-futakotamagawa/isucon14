@@ -177,6 +177,12 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.initRideStatusManager(); err != nil {
+		slog.Error("failed to initialize ride status manager", err)
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
 
