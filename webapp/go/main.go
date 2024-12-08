@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/bytedance/sonic"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
@@ -385,12 +386,12 @@ type Coordinate struct {
 }
 
 func bindJSON(r *http.Request, v interface{}) error {
-	return json.NewDecoder(r.Body).Decode(v)
+	return sonic.NewDecoder(r.Body).Decode(v)
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-	buf, err := json.Marshal(v)
+	buf, err := sonic.Marshal(v)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -402,7 +403,7 @@ func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 func writeError(w http.ResponseWriter, statusCode int, err error) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(statusCode)
-	buf, marshalError := json.Marshal(map[string]string{"message": err.Error()})
+	buf, marshalError := sonic.Marshal(map[string]string{"message": err.Error()})
 	if marshalError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":"marshaling error failed"}`))
