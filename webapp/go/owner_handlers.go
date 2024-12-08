@@ -164,16 +164,16 @@ func calculateSale(ride Ride) int {
 }
 
 type chairWithDetail struct {
-	ID                     string       `h.db:"id"`
-	OwnerID                string       `h.db:"owner_id"`
-	Name                   string       `h.db:"name"`
-	AccessToken            string       `h.db:"access_token"`
-	Model                  string       `h.db:"model"`
-	IsActive               bool         `h.db:"is_active"`
-	CreatedAt              time.Time    `h.db:"created_at"`
-	UpdatedAt              time.Time    `h.db:"updated_at"`
-	TotalDistance          int          `h.db:"total_distance"`
-	TotalDistanceUpdatedAt sql.NullTime `h.db:"total_distance_updated_at"`
+	ID                     string       `db:"id"`
+	OwnerID                string       `db:"owner_id"`
+	Name                   string       `db:"name"`
+	AccessToken            string       `db:"access_token"`
+	Model                  string       `db:"model"`
+	IsActive               bool         `db:"is_active"`
+	CreatedAt              time.Time    `db:"created_at"`
+	UpdatedAt              time.Time    `db:"updated_at"`
+	TotalDistance          int          `db:"total_distance"`
+	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
 }
 
 type ownerGetChairResponse struct {
