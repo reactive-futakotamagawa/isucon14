@@ -204,7 +204,7 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 			c.is_active,
 			c.created_at,
 			c.updated_at,
-			ctd.total_distance AS total_distance,
+			IFNULL(ctd.total_distance, 0) AS total_distance,
 			ctd.created_at AS total_distance_updated_at
 		FROM chairs AS c 
 		LEFT JOIN chair_total_distance AS ctd ON c.id = ctd.chair_id 
