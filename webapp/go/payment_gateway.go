@@ -31,6 +31,7 @@ func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token
 	// FIXME: 社内決済マイクロサービスのインフラに異常が発生していて、同時にたくさんリクエストすると変なことになる可能性あり
 	retry := 0
 	paymentsURL := h.paymentGatewayURL + "/payments"
+	authorization := "Bearer " + token
 	for {
 		err := func() error {
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentsURL, bytes.NewBuffer(b))
@@ -38,7 +39,7 @@ func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token
 				return err
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Authorization", authorization)
 
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
@@ -54,7 +55,7 @@ func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token
 			if err != nil {
 				return err
 			}
-			getReq.Header.Set("Authorization", "Bearer "+token)
+			getReq.Header.Set("Authorization", authorization)
 
 			getRes, err := http.DefaultClient.Do(getReq)
 			if err != nil {
@@ -82,17 +83,15 @@ func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token
 
 			return nil
 		}()
-		if err != nil {
-			if retry < 5 {
-				retry++
-				time.Sleep(100 * time.Millisecond)
-				continue
-			} else {
-				return err
-			}
+		if err == nil {
+			return nil
 		}
-		break
+		if retry < 5 {
+			retry++
+			time.Sleep(100 * time.Millisecond)
+			continue
+		} else {
+			return err
+		}
 	}
-
-	return nil
 }
