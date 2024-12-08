@@ -161,6 +161,46 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
+	{
+		locations := []ChairLocation{}
+		err := h.db.SelectContext(ctx, &locations, "SELECT * FROM chair_locations ORDER BY created_at ASC")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		chairLastLocationMap := make(map[string]ChairLocation, len(locations))
+		chairTotalDistanceMap := make(map[string]TotalDistance, len(locations))
+		for _, location := range locations {
+			lastLocation, ok := chairLastLocationMap[location.ChairID]
+			if !ok {
+				lastLocation = ChairLocation{Latitude: 0, Longitude: 0}
+			}
+			lastTotalDistance, ok := chairTotalDistanceMap[location.ChairID]
+			if !ok {
+				lastTotalDistance = TotalDistance{Distance: 0}
+			}
+			chairTotalDistanceMap[location.ChairID] = TotalDistance{
+				Distance:  abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.Distance,
+				ChairID:   location.ChairID,
+				CreatedAt: location.CreatedAt,
+			}
+		}
+
+		allTotalDistances := make([]TotalDistance, 0, len(chairTotalDistanceMap))
+		for _, totalDistance := range chairTotalDistanceMap {
+			allTotalDistances = append(allTotalDistances, totalDistance)
+		}
+
+		if len(allTotalDistances) > 0 {
+			_, err = h.db.NamedExecContext(ctx, "INSERT INTO chair_total_distance (chair_id, distance, created_at) VALUES (:chair_id, :distance, :created_at)", allTotalDistances)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
 
