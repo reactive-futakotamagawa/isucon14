@@ -123,7 +123,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	} else {
-		addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
+		addDistance := abs(abs(lastLocation.Latitude)-abs(req.Latitude)) + abs(abs(lastLocation.Longitude)-abs(req.Longitude))
 		_, err = tx.ExecContext(ctx, `UPDATE chair_total_distance SET total_distance = total_distance + ? WHERE chair_id = ?`, addDistance, chair.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
