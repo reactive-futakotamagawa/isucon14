@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	crand "crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,7 +72,45 @@ func setup() http.Handler {
 		panic(err)
 	}
 
-	h := newHandler(db)
+	host2 := os.Getenv("ISUCON_DB_HOST2")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port2 := os.Getenv("ISUCON_DB_PORT")
+	if port == "" {
+		port = "3306"
+	}
+	_, err = strconv.Atoi(port)
+	if err != nil {
+		panic(fmt.Sprintf("failed to convert DB port number from ISUCON_DB_PORT environment variable into int: %v", err))
+	}
+	user2 := os.Getenv("ISUCON_DB_USER")
+	if user == "" {
+		user = "isucon"
+	}
+	password2 := os.Getenv("ISUCON_DB_PASSWORD")
+	if password == "" {
+		password = "isucon"
+	}
+	dbname2 := os.Getenv("ISUCON_DB_NAME")
+	if dbname == "" {
+		dbname = "isuride"
+	}
+
+	dbConfig2 := mysql.NewConfig()
+	dbConfig2.User = user2
+	dbConfig2.Passwd = password2
+	dbConfig2.Addr = net.JoinHostPort(host2, port2)
+	dbConfig2.Net = "tcp"
+	dbConfig2.DBName = dbname2
+	dbConfig2.ParseTime = true
+
+	db2, err := sqlx.Connect("mysql", dbConfig2.FormatDSN())
+	if err != nil {
+		panic(err)
+	}
+
+	h := newHandler(db, db2)
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
@@ -124,6 +164,91 @@ func setup() http.Handler {
 	return mux
 }
 
+type MultiDBTx struct {
+	tx1 *sqlx.Tx // DB1のトランザクション
+	tx2 *sqlx.Tx // DB2のトランザクション
+}
+
+// BeginMultiTx は複数のデータベーストランザクションを開始します
+func BeginMultiTx(db1, db2 *sqlx.DB) (*MultiDBTx, error) {
+	tx1, err := db1.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction for db1: %w", err)
+	}
+
+	tx2, err := db2.Beginx()
+	if err != nil {
+		_ = tx1.Rollback() // tx2のエラー時にtx1をロールバック
+		return nil, fmt.Errorf("failed to begin transaction for db2: %w", err)
+	}
+
+	return &MultiDBTx{tx1: tx1, tx2: tx2}, nil
+}
+
+// Commit は両方のトランザクションをコミットします
+func (m *MultiDBTx) Commit() error {
+	if err := m.tx1.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction for db1: %w", err)
+	}
+	if err := m.tx2.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction for db2: %w", err)
+	}
+	return nil
+}
+
+// Rollback は両方のトランザクションをロールバックします
+func (m *MultiDBTx) Rollback() error {
+	var err1, err2 error
+	if m.tx1 != nil {
+		err1 = m.tx1.Rollback()
+	}
+	if m.tx2 != nil {
+		err2 = m.tx2.Rollback()
+	}
+
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("failed to rollback transactions: db1 error: %v, db2 error: %v", err1, err2)
+	}
+	return nil
+}
+
+// ExecContext は指定したデータベーストランザクションでクエリを実行します
+func (m *MultiDBTx) ExecContext(ctx context.Context, dbName string, query string, args ...interface{}) (sql.Result, error) {
+	switch dbName {
+	case "db1":
+		return m.tx1.ExecContext(ctx, query, args...)
+	case "db2":
+		return m.tx2.ExecContext(ctx, query, args...)
+	default:
+		return m.tx1.ExecContext(ctx, query, args...)
+	}
+}
+
+// GetContext は指定したデータベーストランザクションでデータを取得します
+func (m *MultiDBTx) GetContext(ctx context.Context, dbName string, dest interface{}, query string, args ...interface{}) error {
+	switch dbName {
+	case "db1":
+		return m.tx1.GetContext(ctx, dest, query, args...)
+	case "db2":
+		return m.tx2.GetContext(ctx, dest, query, args...)
+	default:
+		return m.tx1.GetContext(ctx, dest, query, args...)
+	}
+}
+
+// SelectContext は指定したデータベーストランザクションでデータを取得します
+func (m *MultiDBTx) SelectContext(ctx context.Context, dbName string, dest interface{}, query string, args ...interface{}) error {
+	switch dbName {
+	case "db1":
+		return m.tx1.SelectContext(ctx, dest, query, args...)
+	case "db2":
+		return m.tx2.SelectContext(ctx, dest, query, args...)
+	default:
+		return m.tx1.SelectContext(ctx, dest, query, args...)
+	}
+
+}
+
 type postInitializeRequest struct {
 	PaymentServer string `json:"payment_server"`
 }
@@ -134,12 +259,14 @@ type postInitializeResponse struct {
 
 type apiHandler struct {
 	db                *sqlx.DB
+	db2               *sqlx.DB
 	paymentGatewayURL string
 }
 
-func newHandler(db *sqlx.DB) *apiHandler {
+func newHandler(db *sqlx.DB, db2 *sqlx.DB) *apiHandler {
 	return &apiHandler{
-		db: db,
+		db:  db,
+		db2: db2,
 		// dummy
 		paymentGatewayURL: "http://localhost:12345",
 	}
@@ -170,8 +297,14 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
-	// サーバー2に dbInitialize をリクエスト
+	// サーバー3に dbInitialize をリクエスト
 	if err := forwardDbInitializeRequest(req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
+		return
+	}
+
+	// サーバー2に dbInitialize をリクエスト
+	if err := forwardDbInitializeRequest2(req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
 		return
 	}
@@ -189,6 +322,29 @@ func forwardDbInitializeRequest(paymentServer string) error {
 	}
 
 	resp, err := http.Post("http://192.168.0.13:8080/api/db/initialize", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to send request to dbInitialize: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("dbInitialize returned non-200 status: %d, body: %s", resp.StatusCode, string(responseBody))
+	}
+
+	return nil
+}
+
+func forwardDbInitializeRequest2(paymentServer string) error {
+	forwardRequest := postInitializeRequest{
+		PaymentServer: paymentServer,
+	}
+	body, err := json.Marshal(forwardRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post("http://192.168.0.12:8080/api/db/initialize", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to send request to dbInitialize: %w", err)
 	}
