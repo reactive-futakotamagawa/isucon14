@@ -212,7 +212,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -313,7 +313,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 
 	continuingRideCount := 0
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -528,7 +528,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+	status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
