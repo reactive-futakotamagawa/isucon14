@@ -123,20 +123,10 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	lastTotalDistance := &TotalDistance{}
-	if err := tx.GetContext(ctx, lastTotalDistance, `SELECT * FROM chair_total_distance WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`, chair.ID); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		lastTotalDistance = &TotalDistance{
-			ChairID:       chair.ID,
-			TotalDistance: 0,
-		}
-	}
-
-	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, distance) VALUES (?, ?)`,
-		chair.ID, lastTotalDistance.TotalDistance+int(abs(lastLocation.Latitude-req.Latitude)+abs(lastLocation.Longitude-req.Longitude)))
+	addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
+	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, distance) VALUES (?, ?)
+		ON DUPLICATE KEY UPDATE distance = distance + ?`,
+		chair.ID, addDistance, addDistance)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

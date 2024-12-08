@@ -141,6 +141,7 @@ CREATE TABLE `chair_total_distance`
   `chair_id` VARCHAR(26) NOT NULL COMMENT '椅子ID',
   `total_distance` INTEGER NOT NULL COMMENT '合計移動距離',
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新日時',
   PRIMARY KEY (`chair_id`)
 )
   COMMENT = '椅子の合計移動距離テーブル';
