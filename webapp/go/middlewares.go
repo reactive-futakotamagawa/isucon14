@@ -46,7 +46,7 @@ func (h *apiHandler) ownerAuthMiddleware(next http.Handler) http.Handler {
 		}
 		accessToken := c.Value
 		owner := &Owner{}
-		if err := h.db.GetContext(ctx, owner, "SELECT * FROM owners WHERE access_token = ?", accessToken); err != nil {
+		if err := h.db2.GetContext(ctx, owner, "SELECT * FROM owners WHERE access_token = ?", accessToken); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
 				return
@@ -84,7 +84,7 @@ func (h *apiHandler) chairAuthMiddleware(next http.Handler) http.Handler {
 		}
 		accessToken := c.Value
 		// chair := &Chair{}
-		ctx = context.WithValue(ctx, cacheCtxDBKeyVal, h.db) // ここでdb渡す！
+		ctx = context.WithValue(ctx, cacheCtxDBKeyVal, h.db2) // ここでdb渡す！
 		chair, err := chairAccessTokenCache.Get(ctx, accessToken)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

@@ -240,7 +240,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair = getAppRidesResponseItemChair{}
 
 		chair := &Chair{}
-		if err := tx.GetContext(ctx, "db1", chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := tx.GetContext(ctx, "db2", chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -249,7 +249,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair.Model = chair.Model
 
 		owner := &Owner{}
-		if err := tx.GetContext(ctx, "db1", owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
+		if err := tx.GetContext(ctx, "db2", owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -717,7 +717,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 
 	if ride.ChairID.Valid {
 		chair := &Chair{}
-		if err := tx.tx1.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := tx.tx2.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -885,7 +885,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 
 	coordinate := Coordinate{Latitude: lat, Longitude: lon}
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -893,7 +893,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 	defer tx.Rollback()
 
 	chairs := []Chair{}
-	err = tx.SelectContext(
+	err = tx.tx2.SelectContext(
 		ctx,
 		&chairs,
 		`SELECT * FROM chairs`,
@@ -910,7 +910,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		}
 
 		rides := []*Ride{}
-		if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC`, chair.ID); err != nil {
+		if err := tx.tx1.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC`, chair.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -918,7 +918,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := getLatestRideStatus(ctx, tx, ride.ID)
+			status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -934,7 +934,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 
 		// 最新の位置情報を取得
 		chairLocation := &ChairLocation{}
-		err = tx.GetContext(
+		err = tx.tx1.GetContext(
 			ctx,
 			chairLocation,
 			`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,

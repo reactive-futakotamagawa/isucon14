@@ -43,7 +43,7 @@ func (h *apiHandler) ownerPostOwners(w http.ResponseWriter, r *http.Request) {
 	accessToken := secureRandomStr(32)
 	chairRegisterToken := secureRandomStr(32)
 
-	_, err := h.db.ExecContext(
+	_, err := h.db2.ExecContext(
 		ctx,
 		"INSERT INTO owners (id, name, access_token, chair_register_token) VALUES (?, ?, ?, ?)",
 		ownerID, req.Name, accessToken, chairRegisterToken,
@@ -105,7 +105,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 
 	owner := r.Context().Value("owner").(*Owner)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -113,7 +113,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	chairs := []Chair{}
-	if err := tx.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
+	if err := tx.tx2.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -125,7 +125,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	modelSalesByModel := map[string]int{}
 	for _, chair := range chairs {
 		rides := []Ride{}
-		if err := tx.SelectContext(ctx, &rides, "SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND", chair.ID, since, until); err != nil {
+		if err := tx.tx1.SelectContext(ctx, &rides, "SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND", chair.ID, since, until); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -198,7 +198,7 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	owner := ctx.Value("owner").(*Owner)
 
 	chairs := []Chair{}
-	if err := h.db.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
+	if err := h.db2.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
