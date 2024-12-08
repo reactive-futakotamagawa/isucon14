@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -216,7 +217,10 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 
-	os.Exit(1)
+	// 5秒後にプログラム終了
+	time.AfterFunc(5*time.Second, func() {
+		os.Exit(5)
+	})
 }
 
 type Coordinate struct {
