@@ -13,7 +13,13 @@ import (
 
 type rideStatusManager struct {
 	scacheByRideID *sc.Cache[string, []RideStatus]
-	scacheByID     *sc.Cache[string, RideStatus]
+	scacheByID     *sc.Cache[string, *RideStatus]
+}
+
+type afterCommitFunc func(context.Context) error
+
+func afterCommitNop(_ context.Context) error {
+	return nil
 }
 
 var errorNoMatchingRideStatus = errors.New("no matching ride status")
@@ -33,15 +39,15 @@ func newRideStatusManager(ctx context.Context, db *sqlx.DB) (*rideStatusManager,
 		return nil, err
 	}
 
-	replaceByID := func(ctx context.Context, id string) (RideStatus, error) {
+	replaceByID := func(ctx context.Context, id string) (*RideStatus, error) {
 		slog.InfoContext(ctx, "update cache for id", id)
 		var rideStatus RideStatus
 		if err := db.GetContext(ctx, &rideStatus, "SELECT * FROM ride_statuses WHERE id = ? LIMIT 1", id); err != nil {
-			return RideStatus{}, err
+			return nil, err
 		}
-		return rideStatus, nil
+		return &rideStatus, nil
 	}
-	scacheByID, err := sc.New[string, RideStatus](replaceByID, 1*time.Minute, 2*time.Minute)
+	scacheByID, err := sc.New[string, *RideStatus](replaceByID, 1*time.Minute, 2*time.Minute)
 	if err != nil {
 		return nil, err
 	}
@@ -59,49 +65,67 @@ func (h *apiHandler) initRideStatusManager(ctx context.Context) error {
 	return nil
 }
 
-func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
+func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) (afterCommitFunc, error) {
 	id := ulid.Make().String()
 	_, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", id, rideID, status)
-	// FIXME: ここはtx.Commitと同時にやってほしい
-	m.scacheByID.Notify(ctx, id)
-	m.scacheByRideID.Notify(ctx, rideID)
-	return err
+	if err != nil {
+		return nil, err
+	}
+	afterCommit := func(ctx context.Context) error {
+		m.scacheByID.Notify(ctx, id)
+		m.scacheByRideID.Notify(ctx, rideID)
+		return nil
+	}
+	return afterCommit, nil
 }
 
-func (h *apiHandler) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
-	return h.rideStatus.createRideStatus(ctx, tx, rideID, status)
+func (h *apiHandler) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) (afterCommitFunc, error) {
+	fn, err := h.rideStatus.createRideStatus(ctx, tx, rideID, status)
+	return fn, err
 }
 
-func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, id string) error {
+func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, id string) (afterCommitFunc, error) {
 	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", id)
-	// FIXME
-	m.scacheByID.Notify(ctx, id)
-	rideStatus, err := m.scacheByID.Get(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.scacheByRideID.Notify(ctx, rideStatus.RideID)
-	return err
+	afterCommit := func(ctx context.Context) error {
+		m.scacheByID.Notify(ctx, id)
+		rideStatus, err := m.scacheByID.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
+		return nil
+	}
+	return afterCommit, err
 }
 
-func (h *apiHandler) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, id string) error {
-	return h.rideStatus.updateRideStatusAppSentAt(ctx, tx, id)
+func (h *apiHandler) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, id string) (afterCommitFunc, error) {
+	fn, err := h.rideStatus.updateRideStatusAppSentAt(ctx, tx, id)
+	return fn, err
 }
 
-func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, id string) error {
+func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, id string) (afterCommitFunc, error) {
 	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", id)
-	// FIXME
-	m.scacheByID.Notify(ctx, id)
-	rideStatus, err := m.scacheByID.Get(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.scacheByRideID.Notify(ctx, rideStatus.RideID)
-	return err
+	afterCommit := func(ctx context.Context) error {
+		m.scacheByID.Notify(ctx, id)
+		rideStatus, err := m.scacheByID.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
+		return nil
+	}
+	return afterCommit, err
 }
 
-func (h *apiHandler) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) error {
-	return h.rideStatus.updateRideStatusChairSentAt(ctx, tx, rideID)
+func (h *apiHandler) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) (afterCommitFunc, error) {
+	fn, err := h.rideStatus.updateRideStatusChairSentAt(ctx, tx, rideID)
+	return fn, err
 }
 
 // SELECT * FROM ride_statuses WHERE ride_id = ? AND app_sent_at IS NULL ORDER BY created_at ASC LIMIT 1

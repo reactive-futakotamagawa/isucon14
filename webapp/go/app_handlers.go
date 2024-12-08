@@ -338,7 +338,8 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.createRideStatus(ctx, tx, rideID, "MATCHING"); err != nil {
+	afterCommit, err := h.createRideStatus(ctx, tx, rideID, "MATCHING")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -416,6 +417,10 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -550,7 +555,8 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := h.createRideStatus(ctx, tx, rideID, "COMPLETED"); err != nil {
+	afterCommit, err := h.createRideStatus(ctx, tx, rideID, "COMPLETED")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -597,6 +603,10 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -720,8 +730,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	afterCommit := afterCommitNop
 	if yetSentRideStatus.ID != "" {
-		err := h.updateRideStatusAppSentAt(ctx, tx, yetSentRideStatus.ID)
+		ac, err := h.updateRideStatusAppSentAt(ctx, tx, yetSentRideStatus.ID)
+		afterCommit = ac
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -729,6 +741,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
