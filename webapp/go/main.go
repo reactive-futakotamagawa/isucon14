@@ -261,6 +261,7 @@ type apiHandler struct {
 	db                *sqlx.DB
 	db2               *sqlx.DB
 	paymentGatewayURL string
+	rideStatus        *rideStatusManager
 }
 
 func newHandler(db *sqlx.DB, db2 *sqlx.DB) *apiHandler {
@@ -269,6 +270,8 @@ func newHandler(db *sqlx.DB, db2 *sqlx.DB) *apiHandler {
 		db2: db2,
 		// dummy
 		paymentGatewayURL: "http://localhost:12345",
+		// NOTE: ここではrideStatusを初期化していない
+		rideStatus: nil,
 	}
 }
 
@@ -302,10 +305,16 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
 		return
 	}
-
+	
 	// サーバー2に dbInitialize をリクエスト
 	if err := forwardDbInitializeRequest2(req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
+		return
+	}
+
+	if err := h.initRideStatusManager(ctx); err != nil {
+		slog.Error("failed to initialize ride status manager", err)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -375,6 +384,12 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.paymentGatewayURL = req.PaymentServer
+
+	if err := h.initRideStatusManager(ctx); err != nil {
+		slog.Error("failed to initialize ride status manager", err)
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
