@@ -346,11 +346,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "MATCHING",
-	); err != nil {
+	if err := h.createRideStatus(ctx, tx, rideID, "MATCHING"); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -562,11 +558,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err = tx.ExecContext(
-		ctx,
-		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "COMPLETED")
-	if err != nil {
+	if err := h.createRideStatus(ctx, tx, rideID, "COMPLETED"); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
