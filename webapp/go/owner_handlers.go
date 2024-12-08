@@ -1,12 +1,15 @@
 package main
 
 import (
+	"cmp"
 	"database/sql"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -40,7 +43,7 @@ func (h *apiHandler) ownerPostOwners(w http.ResponseWriter, r *http.Request) {
 	accessToken := secureRandomStr(32)
 	chairRegisterToken := secureRandomStr(32)
 
-	_, err := h.db.ExecContext(
+	_, err := h.db2.ExecContext(
 		ctx,
 		"INSERT INTO owners (id, name, access_token, chair_register_token) VALUES (?, ?, ?, ?)",
 		ownerID, req.Name, accessToken, chairRegisterToken,
@@ -102,7 +105,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 
 	owner := r.Context().Value("owner").(*Owner)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -110,7 +113,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	chairs := []Chair{}
-	if err := tx.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
+	if err := tx.tx2.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -122,7 +125,7 @@ func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	modelSalesByModel := map[string]int{}
 	for _, chair := range chairs {
 		rides := []Ride{}
-		if err := tx.SelectContext(ctx, &rides, "SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND", chair.ID, since, until); err != nil {
+		if err := tx.tx1.SelectContext(ctx, &rides, "SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND", chair.ID, since, until); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -194,35 +197,107 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
 
-	chairs := []chairWithDetail{}
-	if err := h.db.SelectContext(ctx, &chairs, `SELECT id,
-       owner_id,
-       name,
-       access_token,
-       model,
-       is_active,
-       created_at,
-       updated_at,
-       IFNULL(total_distance, 0) AS total_distance,
-       total_distance_updated_at
-FROM chairs
-       LEFT JOIN (SELECT chair_id,
-                          SUM(IFNULL(distance, 0)) AS total_distance,
-                          MAX(created_at)          AS total_distance_updated_at
-                   FROM (SELECT chair_id,
-                                created_at,
-                                ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
-                                ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
-                         FROM chair_locations) tmp
-                   GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
-WHERE owner_id = ?
-`, owner.ID); err != nil {
+	chairs := []Chair{}
+	if err := h.db2.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE owner_id = ?", owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	res := ownerGetChairResponse{}
+	chairIDs := make([]string, 0, len(chairs))
 	for _, chair := range chairs {
+		chairIDs = append(chairIDs, chair.ID)
+	}
+
+	chairMap := make(map[string]Chair, len(chairs))
+	for _, chair := range chairs {
+		chairMap[chair.ID] = chair
+	}
+
+	query, args, err := sqlx.In("SELECT * FROM chair_locations WHERE chair_id IN (?) ORDER BY created_at ASC", chairIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	chairLocations := []ChairLocation{}
+	if err := h.db2.SelectContext(ctx, &chairLocations, query, args...); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	chairLocationsMap := make(map[string][]ChairLocation, len(chairLocations))
+	for _, chair := range chairs {
+		chairLocationsMap[chair.ID] = []ChairLocation{}
+	}
+	for _, chairLocation := range chairLocations {
+		if _, ok := chairLocationsMap[chairLocation.ChairID]; !ok {
+			chairLocationsMap[chairLocation.ChairID] = []ChairLocation{}
+		}
+		chairLocationsMap[chairLocation.ChairID] = append(chairLocationsMap[chairLocation.ChairID], chairLocation)
+	}
+
+	chairDetails := make([]chairWithDetail, 0, len(chairLocationsMap))
+	for chairID, locations := range chairLocationsMap {
+
+		distance := 0
+		for i := 1; i < len(locations); i++ {
+			distance += abs(locations[i].Latitude-locations[i-1].Latitude) + abs(locations[i].Longitude-locations[i-1].Longitude)
+		}
+		var updatedAt sql.NullTime
+		if len(locations) != 0 {
+			updatedAt = sql.NullTime{
+				Time:  locations[len(locations)-1].CreatedAt,
+				Valid: true,
+			}
+		}
+
+		chairDetails = append(chairDetails, chairWithDetail{
+			ID:                     chairID,
+			OwnerID:                chairMap[chairID].OwnerID,
+			Name:                   chairMap[chairID].Name,
+			AccessToken:            chairMap[chairID].AccessToken,
+			Model:                  chairMap[chairID].Model,
+			IsActive:               chairMap[chairID].IsActive,
+			CreatedAt:              chairMap[chairID].CreatedAt,
+			UpdatedAt:              chairMap[chairID].UpdatedAt,
+			TotalDistance:          distance,
+			TotalDistanceUpdatedAt: updatedAt,
+		})
+	}
+
+	// 	chairLocations := []chairWithDetail{}
+	// 	if err := h.db.SelectContext(ctx, &chairLocations, `SELECT id,
+	//        owner_id,
+	//        name,
+	//        access_token,
+	//        model,
+	//        is_active,
+	//        created_at,
+	//        updated_at,
+	//        IFNULL(total_distance, 0) AS total_distance,
+	//        total_distance_updated_at
+	// FROM chairs
+	//        LEFT JOIN (SELECT chair_id,
+	//                           SUM(IFNULL(distance, 0)) AS total_distance,
+	//                           MAX(created_at)          AS total_distance_updated_at
+	//                    FROM (SELECT chair_id,
+	//                                 created_at,
+	//                                 ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
+	//                                 ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+	//                          FROM chair_locations) tmp
+	//                    GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
+	// WHERE owner_id = ?
+	// `, owner.ID); err != nil {
+	// 		writeError(w, http.StatusInternalServerError, err)
+	// 		return
+	// 	}
+
+	slices.SortStableFunc(chairDetails, func(i, j chairWithDetail) int {
+		return cmp.Compare(i.ID, j.ID)
+	})
+
+	res := ownerGetChairResponse{}
+	for _, chair := range chairDetails {
 		c := ownerGetChairResponseChair{
 			ID:            chair.ID,
 			Name:          chair.Name,

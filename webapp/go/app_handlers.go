@@ -41,7 +41,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 	accessToken := secureRandomStr(32)
 	invitationCode := secureRandomStr(15)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -49,7 +49,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(
-		ctx,
+		ctx, "db2",
 		"INSERT INTO users (id, username, firstname, lastname, date_of_birth, access_token, invitation_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
 		userID, req.Username, req.FirstName, req.LastName, req.DateOfBirth, accessToken, invitationCode,
 	)
@@ -60,7 +60,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 
 	// 初回登録キャンペーンのクーポンを付与
 	_, err = tx.ExecContext(
-		ctx,
+		ctx, "db2",
 		"INSERT INTO coupons (user_id, code, discount) VALUES (?, ?, ?)",
 		userID, "CP_NEW2024", 3000,
 	)
@@ -73,7 +73,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 	if req.InvitationCode != nil && *req.InvitationCode != "" {
 		// 招待する側の招待数をチェック
 		var coupons []Coupon
-		err = tx.SelectContext(ctx, &coupons, "SELECT * FROM coupons WHERE code = ? FOR UPDATE", "INV_"+*req.InvitationCode)
+		err = tx.SelectContext(ctx, "db2", &coupons, "SELECT * FROM coupons WHERE code = ? FOR UPDATE", "INV_"+*req.InvitationCode)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -85,7 +85,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 
 		// ユーザーチェック
 		var inviter User
-		err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
+		err = tx.GetContext(ctx, "db2", &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
@@ -97,7 +97,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 
 		// 招待クーポン付与
 		_, err = tx.ExecContext(
-			ctx,
+			ctx, "db2",
 			"INSERT INTO coupons (user_id, code, discount) VALUES (?, ?, ?)",
 			userID, "INV_"+*req.InvitationCode, 1500,
 		)
@@ -107,7 +107,7 @@ func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 		}
 		// 招待した人にもRewardを付与
 		_, err = tx.ExecContext(
-			ctx,
+			ctx, "db2",
 			"INSERT INTO coupons (user_id, code, discount) VALUES (?, CONCAT(?, '_', FLOOR(UNIX_TIMESTAMP(NOW(3))*1000)), ?)",
 			inviter.ID, "RWD_"+*req.InvitationCode, 1000,
 		)
@@ -192,7 +192,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user := ctx.Value("user").(*User)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -201,7 +201,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	rides := []Ride{}
 	if err := tx.SelectContext(
-		ctx,
+		ctx, "db1",
 		&rides,
 		`SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC`,
 		user.ID,
@@ -212,7 +212,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -221,7 +221,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		fare, err := calculateDiscountedFare(ctx, tx, user.ID, &ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+		fare, err := calculateDiscountedFare(ctx, tx.tx2, user.ID, &ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -240,7 +240,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair = getAppRidesResponseItemChair{}
 
 		chair := &Chair{}
-		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := tx.GetContext(ctx, "db2", chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -249,7 +249,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair.Model = chair.Model
 
 		owner := &Owner{}
-		if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
+		if err := tx.GetContext(ctx, "db2", owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -298,7 +298,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	user := ctx.Value("user").(*User)
 	rideID := ulid.Make().String()
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -306,14 +306,14 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	rides := []Ride{}
-	if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE user_id = ?`, user.ID); err != nil {
+	if err := tx.SelectContext(ctx, "db1", &rides, `SELECT * FROM rides WHERE user_id = ?`, user.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	continuingRideCount := 0
 	for _, ride := range rides {
-		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -329,7 +329,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := tx.ExecContext(
-		ctx,
+		ctx, "db1",
 		`INSERT INTO rides (id, user_id, pickup_latitude, pickup_longitude, destination_latitude, destination_longitude)
 				  VALUES (?, ?, ?, ?, ?, ?)`,
 		rideID, user.ID, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude,
@@ -338,14 +338,14 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	afterCommit, err := h.createRideStatus(ctx, tx, rideID, "MATCHING")
+	afterCommit, err := h.createRideStatus(ctx, tx.tx1, rideID, "MATCHING")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	var rideCount int
-	if err := tx.GetContext(ctx, &rideCount, `SELECT COUNT(*) FROM rides WHERE user_id = ? `, user.ID); err != nil {
+	if err := tx.GetContext(ctx, "db1", &rideCount, `SELECT COUNT(*) FROM rides WHERE user_id = ? `, user.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -353,21 +353,21 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	var coupon Coupon
 	if rideCount == 1 {
 		// 初回利用で、初回利用クーポンがあれば必ず使う
-		if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND code = 'CP_NEW2024' AND used_by IS NULL FOR UPDATE", user.ID); err != nil {
+		if err := tx.GetContext(ctx, "db2", &coupon, "SELECT * FROM coupons WHERE user_id = ? AND code = 'CP_NEW2024' AND used_by IS NULL FOR UPDATE", user.ID); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusInternalServerError, err)
 				return
 			}
 
 			// 無ければ他のクーポンを付与された順番に使う
-			if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1 FOR UPDATE", user.ID); err != nil {
+			if err := tx.GetContext(ctx, "db2", &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1 FOR UPDATE", user.ID); err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
 			} else {
 				if _, err := tx.ExecContext(
-					ctx,
+					ctx, "db2",
 					"UPDATE coupons SET used_by = ? WHERE user_id = ? AND code = ?",
 					rideID, user.ID, coupon.Code,
 				); err != nil {
@@ -377,7 +377,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			if _, err := tx.ExecContext(
-				ctx,
+				ctx, "db2",
 				"UPDATE coupons SET used_by = ? WHERE user_id = ? AND code = 'CP_NEW2024'",
 				rideID, user.ID,
 			); err != nil {
@@ -387,14 +387,14 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// 他のクーポンを付与された順番に使う
-		if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1 FOR UPDATE", user.ID); err != nil {
+		if err := tx.GetContext(ctx, "db2", &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1 FOR UPDATE", user.ID); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusInternalServerError, err)
 				return
 			}
 		} else {
 			if _, err := tx.ExecContext(
-				ctx,
+				ctx, "db2",
 				"UPDATE coupons SET used_by = ? WHERE user_id = ? AND code = ?",
 				rideID, user.ID, coupon.Code,
 			); err != nil {
@@ -405,12 +405,12 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ride := Ride{}
-	if err := tx.GetContext(ctx, &ride, "SELECT * FROM rides WHERE id = ?", rideID); err != nil {
+	if err := tx.GetContext(ctx, "db1", &ride, "SELECT * FROM rides WHERE id = ?", rideID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, user.ID, &ride, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
+	fare, err := calculateDiscountedFare(ctx, tx.tx2, user.ID, &ride, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -455,7 +455,7 @@ func (h *apiHandler) appPostRidesEstimatedFare(w http.ResponseWriter, r *http.Re
 
 	user := ctx.Value("user").(*User)
 
-	tx, err := h.db.Beginx()
+	tx, err := h.db2.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -512,7 +512,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -520,7 +520,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	defer tx.Rollback()
 
 	ride := &Ride{}
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
+	if err := tx.GetContext(ctx, "db1", ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, errors.New("ride not found"))
 			return
@@ -528,7 +528,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
+	status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -540,7 +540,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	}
 
 	result, err := tx.ExecContext(
-		ctx,
+		ctx, "db1",
 		`UPDATE rides SET evaluation = ? WHERE id = ?`,
 		req.Evaluation, rideID)
 	if err != nil {
@@ -555,13 +555,13 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	afterCommit, err := h.createRideStatus(ctx, tx, rideID, "COMPLETED")
+	afterCommit, err := h.createRideStatus(ctx, tx.tx1, rideID, "COMPLETED")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
+	if err := tx.GetContext(ctx, "db1", ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, errors.New("ride not found"))
 			return
@@ -571,7 +571,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	}
 
 	paymentToken := &PaymentToken{}
-	if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
+	if err := tx.GetContext(ctx, "db1", paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
 			return
@@ -580,7 +580,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+	fare, err := calculateDiscountedFare(ctx, tx.tx2, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -590,7 +590,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	}
 
 	var ridesCount int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM rides WHERE user_id = ? ORDER BY created_at ASC`, ride.UserID).Scan(&ridesCount); err != nil {
+	if err := tx.tx1.QueryRowContext(ctx, `SELECT COUNT(*) FROM rides WHERE user_id = ? ORDER BY created_at ASC`, ride.UserID).Scan(&ridesCount); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 	}
 	if err := h.requestPaymentGatewayPostPayment(ctx, paymentToken.Token, paymentGatewayRequest, ridesCount); err != nil {
@@ -648,7 +648,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	user := ctx.Value("user").(*User)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -656,10 +656,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	defer tx.Rollback()
 
 	ride := &Ride{}
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`, user.ID); err != nil {
+	if err := tx.tx1.GetContext(ctx, ride, `SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`, user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &appGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: 100,
 			})
 			return
 		}
@@ -668,10 +668,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	}
 
 	status := ""
-	yetSentRideStatus, err := h.findRideStatusYetSentByApp(ctx, tx, ride.ID)
+	yetSentRideStatus, err := h.findRideStatusYetSentByApp(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = h.getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -684,7 +684,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 		status = yetSentRideStatus.Status
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, user.ID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+	fare, err := calculateDiscountedFare(ctx, tx.tx2, user.ID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -706,17 +706,17 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 			CreatedAt: ride.CreatedAt.UnixMilli(),
 			UpdateAt:  ride.UpdatedAt.UnixMilli(),
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: 100,
 	}
 
 	if ride.ChairID.Valid {
 		chair := &Chair{}
-		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := tx.tx2.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		stats, err := getChairStats(ctx, tx, chair.ID)
+		stats, err := getChairStats(ctx, tx.tx1, chair.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -732,7 +732,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 
 	afterCommit := afterCommitNop
 	if yetSentRideStatus.ID != "" {
-		ac, err := h.updateRideStatusAppSentAt(ctx, tx, yetSentRideStatus.ID)
+		ac, err := h.updateRideStatusAppSentAt(ctx, tx.tx1, yetSentRideStatus.ID)
 		afterCommit = ac
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
@@ -766,7 +766,7 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 	rows := []getChairStatsStruct{}
 
 	query := `
-		SELECT 
+		SELECT
 			r.id AS ride_id,
 			r.evaluation,
 			rs.status,
@@ -885,7 +885,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 
 	coordinate := Coordinate{Latitude: lat, Longitude: lon}
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -893,7 +893,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 	defer tx.Rollback()
 
 	chairs := []Chair{}
-	err = tx.SelectContext(
+	err = tx.tx2.SelectContext(
 		ctx,
 		&chairs,
 		`SELECT * FROM chairs`,
@@ -910,7 +910,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		}
 
 		rides := []*Ride{}
-		if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC`, chair.ID); err != nil {
+		if err := tx.tx1.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC`, chair.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -918,7 +918,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
+			status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -934,7 +934,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 
 		// 最新の位置情報を取得
 		chairLocation := &ChairLocation{}
-		err = tx.GetContext(
+		err = tx.tx2.GetContext(
 			ctx,
 			chairLocation,
 			`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
@@ -961,16 +961,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	retrievedAt := &time.Time{}
-	err = tx.GetContext(
-		ctx,
-		retrievedAt,
-		`SELECT CURRENT_TIMESTAMP(6)`,
-	)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
+	retrievedAt := time.Now()
 
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,

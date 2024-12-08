@@ -34,7 +34,7 @@ func (h *apiHandler) chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	owner := &Owner{}
-	if err := h.db.GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
+	if err := h.db2.GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusUnauthorized, errors.New("invalid chair_register_token"))
 			return
@@ -46,7 +46,7 @@ func (h *apiHandler) chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	chairID := ulid.Make().String()
 	accessToken := secureRandomStr(32)
 
-	_, err := h.db.ExecContext(
+	_, err := h.db2.ExecContext(
 		ctx,
 		"INSERT INTO chairs (id, owner_id, name, model, is_active, access_token) VALUES (?, ?, ?, ?, ?, ?)",
 		chairID, owner.ID, req.Name, req.Model, false, accessToken,
@@ -82,11 +82,12 @@ func (h *apiHandler) chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.db.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
+	_, err := h.db2.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	chairAccessTokenCache.Forget(chair.AccessToken)
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -105,7 +106,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 
 	chair := ctx.Value("chair").(*Chair)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -113,7 +114,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	defer tx.Rollback()
 
 	chairLocationID := ulid.Make().String()
-	if _, err := tx.ExecContext(
+	if _, err := tx.tx2.ExecContext(
 		ctx,
 		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
 		chairLocationID, chair.ID, req.Latitude, req.Longitude,
@@ -123,27 +124,27 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	}
 
 	location := &ChairLocation{}
-	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
+	if err := tx.tx2.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	ride := &Ride{}
 	afterCommit := afterCommitNop
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := tx.tx1.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
 	} else {
-		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if status != "COMPLETED" && status != "CANCELED" {
 			if req.Latitude == ride.PickupLatitude && req.Longitude == ride.PickupLongitude && status == "ENROUTE" {
-				if ac, err := h.createRideStatus(ctx, tx, ride.ID, "PICKUP"); err != nil {
+				if ac, err := h.createRideStatus(ctx, tx.tx1, ride.ID, "PICKUP"); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				} else {
@@ -152,7 +153,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
-				if ac, err := h.createRideStatus(ctx, tx, ride.ID, "ARRIVED"); err != nil {
+				if ac, err := h.createRideStatus(ctx, tx.tx1, ride.ID, "ARRIVED"); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				} else {
@@ -204,7 +205,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	chair := ctx.Value("chair").(*Chair)
 
-	tx, err := h.db.Beginx()
+	tx, err := BeginMultiTx(h.db, h.db2)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -213,10 +214,10 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 	ride := &Ride{}
 	status := ""
 
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := tx.GetContext(ctx, "db1", ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: 100,
 			})
 			return
 		}
@@ -224,10 +225,10 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	yetSentRideStatus, err := h.findRideStatusYetSentByChair(ctx, tx, ride.ID)
+	yetSentRideStatus, err := h.findRideStatusYetSentByChair(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = h.getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -241,7 +242,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 	}
 
 	user := &User{}
-	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
+	err = tx.GetContext(ctx, "db2", user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -249,7 +250,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 
 	afterCommit := afterCommitNop
 	if yetSentRideStatus.ID != "" {
-		ac, err := h.updateRideStatusChairSentAt(ctx, tx, yetSentRideStatus.ID)
+		ac, err := h.updateRideStatusChairSentAt(ctx, tx.tx1, yetSentRideStatus.ID)
 		afterCommit = ac
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
@@ -283,7 +284,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 			},
 			Status: status,
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: 100,
 	})
 }
 
