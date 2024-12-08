@@ -93,6 +93,7 @@ func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *s
 		m.scacheByID.Notify(ctx, id)
 		rideStatus, err := m.scacheByID.Get(ctx, id)
 		if err != nil {
+			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
 		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
@@ -115,6 +116,7 @@ func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx 
 		m.scacheByID.Notify(ctx, id)
 		rideStatus, err := m.scacheByID.Get(ctx, id)
 		if err != nil {
+			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
 		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
