@@ -72,6 +72,7 @@ func setup() http.Handler {
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
 	mux.HandleFunc("POST /api/initialize", h.postInitialize)
+	mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
 
 	// app handlers
 	{
@@ -150,6 +151,50 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if out, err := exec.Command("../sql/init.sh").CombinedOutput(); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to initialize: %s: %w", string(out), err))
+		return
+	}
+
+	if _, err := h.db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.paymentGatewayURL = req.PaymentServer
+
+	// サーバー2のdbInitializeにリクエストを転送
+	server2URL := "http://192.168.0.12:8080/api/db/initialize"
+	server2Req, err := http.NewRequestWithContext(ctx, "POST", server2URL, r.Body)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to create request to server2: %w", err))
+		return
+	}
+	server2Req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+	client := &http.Client{}
+	server2Resp, err := client.Do(server2Req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to communicate with server2: %w", err))
+		return
+	}
+	defer server2Resp.Body.Close()
+
+	if server2Resp.StatusCode != http.StatusOK {
+		writeError(w, server2Resp.StatusCode, fmt.Errorf("server2 returned status code %d", server2Resp.StatusCode))
+		return
+	}
+
+	// レスポンスを返す
+	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+}
+
+func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	req := &postInitializeRequest{}
+	if err := bindJSON(r, req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
 	if out, err := exec.Command("../sql/init.sh").CombinedOutput(); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to initialize: %s: %w", string(out), err))
 		return
