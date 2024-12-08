@@ -12,8 +12,8 @@ import (
 )
 
 type rideStatusManager struct {
+	db             *sqlx.DB
 	scacheByRideID *sc.Cache[string, []RideStatus]
-	scacheByID     *sc.Cache[string, *RideStatus]
 }
 
 type afterCommitFunc func(context.Context) error
@@ -39,20 +39,7 @@ func newRideStatusManager(ctx context.Context, db *sqlx.DB) (*rideStatusManager,
 		return nil, err
 	}
 
-	replaceByID := func(ctx context.Context, id string) (*RideStatus, error) {
-		slog.InfoContext(ctx, "update cache for id", id)
-		var rideStatus RideStatus
-		if err := db.GetContext(ctx, &rideStatus, "SELECT * FROM ride_statuses WHERE id = ? LIMIT 1", id); err != nil {
-			return nil, err
-		}
-		return &rideStatus, nil
-	}
-	scacheByID, err := sc.New[string, *RideStatus](replaceByID, 1*time.Minute, 2*time.Minute)
-	if err != nil {
-		return nil, err
-	}
-
-	return &rideStatusManager{scacheByRideID, scacheByID}, nil
+	return &rideStatusManager{db, scacheByRideID}, nil
 }
 
 func (h *apiHandler) initRideStatusManager(ctx context.Context) error {
@@ -72,7 +59,6 @@ func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, r
 		return nil, err
 	}
 	afterCommit := func(ctx context.Context) error {
-		m.scacheByID.Notify(ctx, id)
 		m.scacheByRideID.Notify(ctx, rideID)
 		return nil
 	}
@@ -90,9 +76,8 @@ func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *s
 		return nil, err
 	}
 	afterCommit := func(ctx context.Context) error {
-		m.scacheByID.Notify(ctx, id)
-		rideStatus, err := m.scacheByID.Get(ctx, id)
-		if err != nil {
+		var rideStatus RideStatus
+		if err := m.db.GetContext(ctx, &rideStatus, "SELECT * FROM ride_statuses WHERE id = ? LIMIT 1", id); err != nil {
 			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
@@ -113,9 +98,8 @@ func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx 
 		return nil, err
 	}
 	afterCommit := func(ctx context.Context) error {
-		m.scacheByID.Notify(ctx, id)
-		rideStatus, err := m.scacheByID.Get(ctx, id)
-		if err != nil {
+		var rideStatus RideStatus
+		if err := m.db.GetContext(ctx, &rideStatus, "SELECT * FROM ride_statuses WHERE id = ? LIMIT 1", id); err != nil {
 			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
