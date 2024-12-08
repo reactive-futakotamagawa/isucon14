@@ -30,6 +30,7 @@ func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
 	if err != nil {
 		return nil, err
 	}
+	scache.Purge()
 	return &rideStatusManager{scache: scache}, nil
 }
 
