@@ -122,6 +122,12 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if _, err := tx.ExecContext(ctx, "UPDATE current_chair_locations SET latitude = ?, longitude = ? WHERE chair_id = ?",
+		req.Latitude, req.Longitude, chair.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	location := &ChairLocation{}
 	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
