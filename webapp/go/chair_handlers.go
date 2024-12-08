@@ -86,6 +86,7 @@ func (h *apiHandler) chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	chairAccessTokenCache.Forget(chair.AccessToken)
 
 	w.WriteHeader(http.StatusNoContent)
 }
