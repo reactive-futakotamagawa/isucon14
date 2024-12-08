@@ -178,13 +178,19 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 			}
 			lastTotalDistance, ok := chairTotalDistanceMap[location.ChairID]
 			if !ok {
-				lastTotalDistance = TotalDistance{TotalDistance: 0}
-			}
-			chairTotalDistanceMap[location.ChairID] = TotalDistance{
-				TotalDistance: abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.TotalDistance,
-				ChairID:       location.ChairID,
-				CreatedAt:     location.CreatedAt,
-				UpdatedAt:     location.CreatedAt,
+				chairTotalDistanceMap[location.ChairID] = TotalDistance{
+					TotalDistance: 0,
+					ChairID:       location.ChairID,
+					CreatedAt:     location.CreatedAt,
+					UpdatedAt:     location.CreatedAt,
+				}
+			} else {
+				chairTotalDistanceMap[location.ChairID] = TotalDistance{
+					TotalDistance: abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.TotalDistance,
+					ChairID:       location.ChairID,
+					CreatedAt:     location.CreatedAt,
+					UpdatedAt:     location.CreatedAt,
+				}
 			}
 		}
 
