@@ -135,8 +135,6 @@ CREATE TABLE coupons
 )
   COMMENT 'クーポンテーブル';
 
-ALTER TABLE `ride_statuses` ADD INDEX `idx_ride_statuses_ride_id_created_at` (`ride_id`, `created_at` DESC);
-
 DROP TABLE IF EXISTS `chair_total_distance`;
 CREATE TABLE `chair_total_distance`
 (
