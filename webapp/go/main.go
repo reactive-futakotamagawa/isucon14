@@ -163,7 +163,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	h.paymentGatewayURL = req.PaymentServer
 
 	// サーバー2のdbInitializeにリクエストを転送
-	server2URL := "https://192.168.0.12:8080/api/db/initialize"
+	server2URL := "http://192.168.0.12:8080/api/db/initialize"
 	server2Req, err := http.NewRequestWithContext(ctx, "POST", server2URL, r.Body)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to create request to server2: %w", err))
@@ -180,7 +180,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	defer server2Resp.Body.Close()
 
 	if server2Resp.StatusCode != http.StatusOK {
-		writeError(w, server2Resp.StatusCode, fmt.Errorf("server2 returned status code %d", server2Resp.StatusCode))
+		writeError(w, http.StatusAlreadyReported, fmt.Errorf("server2 returned status code %d", server2Resp.StatusCode))
 		return
 	}
 
