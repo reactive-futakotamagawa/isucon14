@@ -112,7 +112,7 @@ func setup() http.Handler {
 
 	h := newHandler(db, db2)
 	mux := chi.NewRouter()
-	mux.Use(middleware.Logger)
+	// mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
 
 	dbOnly := os.Getenv("DB_ONLY")
