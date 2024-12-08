@@ -215,6 +215,8 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 	h.paymentGatewayURL = req.PaymentServer
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+
+	os.Exit(1)
 }
 
 type Coordinate struct {
