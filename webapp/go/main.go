@@ -72,8 +72,13 @@ func setup() http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
+
+	dbOnly := os.Getenv("DB_ONLY")
+	if dbOnly == "1" {
+		mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
+		return mux
+	}
 	mux.HandleFunc("POST /api/initialize", h.postInitialize)
-	mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
 
 	// app handlers
 	{
