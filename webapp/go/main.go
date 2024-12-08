@@ -192,6 +192,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 					UpdatedAt:     location.CreatedAt,
 				}
 			}
+			chairLastLocationMap[location.ChairID] = location
 		}
 
 		allTotalDistances := make([]TotalDistance, 0, len(chairTotalDistanceMap))
