@@ -757,52 +757,79 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNotificationResponseChairStats, error) {
 	stats := appGetNotificationResponseChairStats{}
 
-	rides := []Ride{}
-	err := tx.SelectContext(
-		ctx,
-		&rides,
-		`SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC`,
-		chairID,
-	)
+	query := `
+		SELECT 
+			r.id AS ride_id,
+			r.evaluation AS evaluation,
+			rs.status AS status,
+			rs.created_at AS status_created_at
+		FROM rides r
+		LEFT JOIN ride_statuses rs ON r.id = rs.ride_id
+		WHERE r.chair_id = ?
+		ORDER BY r.updated_at DESC, rs.created_at ASC
+	`
+
+	rows := []struct {
+		RideID          string         `db:"ride_id"`
+		Evaluation      sql.NullInt64  `db:"evaluation"`
+		Status          sql.NullString `db:"status"`
+		StatusCreatedAt sql.NullTime   `db:"status_created_at"`
+	}{}
+
+	err := tx.SelectContext(ctx, &rows, query, chairID)
 	if err != nil {
 		return stats, err
 	}
 
+	rideMap := make(map[string]*struct {
+		ArrivedAt   *time.Time
+		PickedUpAt  *time.Time
+		IsCompleted bool
+		TotalEval   float64
+		EvalCount   int
+	})
+	for _, row := range rows {
+		ride, exists := rideMap[row.RideID]
+		if !exists {
+			ride = &struct {
+				ArrivedAt   *time.Time
+				PickedUpAt  *time.Time
+				IsCompleted bool
+				TotalEval   float64
+				EvalCount   int
+			}{}
+			rideMap[row.RideID] = ride
+		}
+
+		if row.Status.Valid {
+			switch row.Status.String {
+			case "ARRIVED":
+				if row.StatusCreatedAt.Valid {
+					ride.ArrivedAt = &row.StatusCreatedAt.Time
+				}
+			case "CARRYING":
+				if row.StatusCreatedAt.Valid {
+					ride.PickedUpAt = &row.StatusCreatedAt.Time
+				}
+			case "COMPLETED":
+				ride.IsCompleted = true
+			}
+		}
+
+		if row.Evaluation.Valid {
+			ride.TotalEval += float64(row.Evaluation.Int64)
+			ride.EvalCount++
+		}
+	}
+
 	totalRideCount := 0
 	totalEvaluation := 0.0
-	for _, ride := range rides {
-		rideStatuses := []RideStatus{}
-		err = tx.SelectContext(
-			ctx,
-			&rideStatuses,
-			`SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at`,
-			ride.ID,
-		)
-		if err != nil {
-			return stats, err
-		}
 
-		var arrivedAt, pickupedAt *time.Time
-		var isCompleted bool
-		for _, status := range rideStatuses {
-			if status.Status == "ARRIVED" {
-				arrivedAt = &status.CreatedAt
-			} else if status.Status == "CARRYING" {
-				pickupedAt = &status.CreatedAt
-			}
-			if status.Status == "COMPLETED" {
-				isCompleted = true
-			}
+	for _, ride := range rideMap {
+		if ride.ArrivedAt != nil && ride.PickedUpAt != nil && ride.IsCompleted {
+			totalRideCount++
+			totalEvaluation += ride.TotalEval
 		}
-		if arrivedAt == nil || pickupedAt == nil {
-			continue
-		}
-		if !isCompleted {
-			continue
-		}
-
-		totalRideCount++
-		totalEvaluation += float64(*ride.Evaluation)
 	}
 
 	stats.TotalRidesCount = totalRideCount
