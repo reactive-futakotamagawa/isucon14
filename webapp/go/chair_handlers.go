@@ -81,7 +81,7 @@ func (h *apiHandler) chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.db.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
+	_, err := h.db.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ? ", req.IsActive, chair.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -112,19 +112,19 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	defer tx.Rollback()
 
 	lastLocation := &ChairLocation{}
-	if err := tx.GetContext(ctx, lastLocation, `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := tx.GetContext(ctx, lastLocation, `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1 FOR UPDATE `, chair.ID); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		_, err := tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)`, chair.ID, 0)
+		_, err := tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?) FOR UPDATE`, chair.ID, 0)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
 	} else {
-		addDistance := abs(abs(lastLocation.Latitude)-abs(req.Latitude)) + abs(abs(lastLocation.Longitude)-abs(req.Longitude))
-		_, err = tx.ExecContext(ctx, `UPDATE chair_total_distance SET total_distance = total_distance + ? WHERE chair_id = ?`, addDistance, chair.ID)
+		addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
+		_, err = tx.ExecContext(ctx, `UPDATE chair_total_distance SET total_distance = total_distance + ? WHERE chair_id = ?  FOR UPDATE`, addDistance, chair.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -134,7 +134,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	chairLocationID := ulid.Make().String()
 	if _, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
+		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)  FOR UPDATE`,
 		chairLocationID, chair.ID, req.Latitude, req.Longitude,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -142,13 +142,13 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	}
 
 	location := &ChairLocation{}
-	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
+	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?  FOR UPDATE`, chairLocationID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	ride := &Ride{}
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1  FOR UPDATE`, chair.ID); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -161,14 +161,14 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 		}
 		if status != "COMPLETED" && status != "CANCELED" {
 			if req.Latitude == ride.PickupLatitude && req.Longitude == ride.PickupLongitude && status == "ENROUTE" {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "PICKUP"); err != nil {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)  FOR UPDATE", ulid.Make().String(), ride.ID, "PICKUP"); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ARRIVED"); err != nil {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)  FOR UPDATE", ulid.Make().String(), ride.ID, "ARRIVED"); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
