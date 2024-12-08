@@ -8,3 +8,6 @@ ISUCON_DB_NAME="isuride"
 # マッチング間隔（秒）
 ISUCON_MATCHING_INTERVAL=0.5
 PPROTEIN_GIT_REPOSITORY=/home/isucon
+
+# tuika
+USE_SOCKET=1
