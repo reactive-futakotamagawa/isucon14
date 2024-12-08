@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net"
@@ -11,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -72,6 +75,7 @@ func setup() http.Handler {
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
 	mux.HandleFunc("POST /api/initialize", h.postInitialize)
+	mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
 
 	// app handlers
 	{
@@ -161,6 +165,12 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
+	// サーバー2に dbInitialize をリクエスト
+	if err := forwardDbInitializeRequest(req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
+		return
+	}
+
 	{
 		locations := []ChairLocation{}
 		err := h.db.SelectContext(ctx, &locations, "SELECT * FROM chair_locations ORDER BY created_at ASC")
@@ -210,6 +220,55 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+}
+
+func forwardDbInitializeRequest(paymentServer string) error {
+	forwardRequest := postInitializeRequest{
+		PaymentServer: paymentServer,
+	}
+	body, err := json.Marshal(forwardRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post("http://192.168.0.13:8080/api/db/initialize", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to send request to dbInitialize: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("dbInitialize returned non-200 status: %d, body: %s", resp.StatusCode, string(responseBody))
+	}
+
+	return nil
+}
+
+func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	req := &postInitializeRequest{}
+	if err := bindJSON(r, req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if out, err := exec.Command("../sql/init.sh").CombinedOutput(); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to initialize: %s: %w", string(out), err))
+		return
+	}
+
+	if _, err := h.db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.paymentGatewayURL = req.PaymentServer
+
+	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+
+	// 5秒後にプログラム終了
+	time.AfterFunc(5*time.Second, func() {
+		os.Exit(5)
+	})
 }
 
 type Coordinate struct {
