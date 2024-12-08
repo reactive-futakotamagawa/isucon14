@@ -19,6 +19,7 @@ var errorNoMatchingRideStatus = errors.New("no matching ride status")
 
 func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
 	replace := func(ctx context.Context, rideID string) ([]RideStatus, error) {
+		slog.InfoContext(ctx, "update cache for rideID", rideID)
 		var rideStatuses []RideStatus
 		if err := db.SelectContext(ctx, &rideStatuses, "SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at ASC", rideID); err != nil {
 			return nil, err
