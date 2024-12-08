@@ -1,0 +1,87 @@
+# DB Graph
+node: ![](https://via.placeholder.com/16/795548/FFFFFF/?text=%20) `テーブル` ![](https://via.placeholder.com/16/1976D2/FFFFFF/?text=%20) `関数` 
+
+edge: ![](https://via.placeholder.com/16/CDDC39/FFFFFF/?text=%20) `INSERT` ![](https://via.placeholder.com/16/FF9800/FFFFFF/?text=%20) `UPDATE` ![](https://via.placeholder.com/16/F44336/FFFFFF/?text=%20) `DELETE` ![](https://via.placeholder.com/16/78909C/FFFFFF/?text=%20) `SELECT` ![](https://via.placeholder.com/16/BBDEFB/FFFFFF/?text=%20) `関数呼び出し` 
+```mermaid
+graph LR
+  classDef table fill:#795548,fill-opacity:0.5
+  classDef func fill:#1976D2,fill-opacity:0.5
+  func:github.com/isucon/isucon14/webapp/go.chairAuthMiddleware[chairAuthMiddleware]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNearbyChairs[appGetNearbyChairs]:::func ==> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetNearbyChairs[appGetNearbyChairs]:::func ==> table:chair_locations[chair_locations]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNearbyChairs[appGetNearbyChairs]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNearbyChairs[appGetNearbyChairs]:::func ==> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNearbyChairs[appGetNearbyChairs]:::func --> table:timestamp[timestamp]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostCoordinate[chairPostCoordinate]:::func --> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.chairPostCoordinate[chairPostCoordinate]:::func --> table:chair_locations[chair_locations]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostCoordinate[chairPostCoordinate]:::func --> table:chair_locations[chair_locations]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostCoordinate[chairPostCoordinate]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostCoordinate[chairPostCoordinate]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func ==> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRides[appPostRides]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetRides[appGetRides]:::func ==> func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetRides[appGetRides]:::func ==> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetRides[appGetRides]:::func ==> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetRides[appGetRides]:::func ==> table:owners[owners]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetRides[appGetRides]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostActivity[chairPostActivity]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerAuthMiddleware[ownerAuthMiddleware]:::func --> table:owners[owners]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerGetChairs[ownerGetChairs]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostChairs[chairPostChairs]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostChairs[chairPostChairs]:::func --> table:owners[owners]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerPostOwners[ownerPostOwners]:::func --> table:owners[owners]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostUsers[appPostUsers]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostUsers[appPostUsers]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostUsers[appPostUsers]:::func --> table:users[users]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostUsers[appPostUsers]:::func --> table:users[users]:::table
+  func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerGetSales[ownerGetSales]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerGetSales[ownerGetSales]:::func ==> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.ownerGetSales[ownerGetSales]:::func ==> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:payment_tokens[payment_tokens]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRideEvaluatation[appPostRideEvaluatation]:::func --> table:settings[settings]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairGetNotification[chairGetNotification]:::func --> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.chairGetNotification[chairGetNotification]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairGetNotification[chairGetNotification]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairGetNotification[chairGetNotification]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairGetNotification[chairGetNotification]:::func --> table:users[users]:::table
+  func:github.com/isucon/isucon14/webapp/go.appAuthMiddleware[appAuthMiddleware]:::func --> table:users[users]:::table
+  func:github.com/isucon/isucon14/webapp/go.getChairStats[getChairStats]:::func ==> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.getChairStats[getChairStats]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostPaymentMethods[appPostPaymentMethods]:::func --> table:payment_tokens[payment_tokens]:::table
+  func:github.com/isucon/isucon14/webapp/go.appPostRidesEstimatedFare[appPostRidesEstimatedFare]:::func --> func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func
+  func:github.com/isucon/isucon14/webapp/go.chairPostRideStatus[chairPostRideStatus]:::func --> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.chairPostRideStatus[chairPostRideStatus]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.chairPostRideStatus[chairPostRideStatus]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.internalGetMatching[internalGetMatching]:::func ==> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.internalGetMatching[internalGetMatching]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.internalGetMatching[internalGetMatching]:::func --> table:rides[rides]:::table
+  func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func --> table:coupons[coupons]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> func:github.com/isucon/isucon14/webapp/go.calculateDiscountedFare[calculateDiscountedFare]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> func:github.com/isucon/isucon14/webapp/go.getChairStats[getChairStats]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> func:github.com/isucon/isucon14/webapp/go.getLatestRideStatus[getLatestRideStatus]:::func
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> table:chairs[chairs]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> table:ride_statuses[ride_statuses]:::table
+  func:github.com/isucon/isucon14/webapp/go.appGetNotification[appGetNotification]:::func --> table:rides[rides]:::table
+  linkStyle 0,2,3,4,5,7,10,14,16,19,21,24,25,26,28,29,31,33,36,37,38,39,40,43,45,47,48,51,52,53,54,55,56,61,62,64,65,69,70,72 stroke:#78909C,stroke-width:2px
+  linkStyle 1,6,11,12,22,23,41,42,49,58,59,66,67,68 stroke:#BBDEFB,stroke-width:2px
+  linkStyle 8,9,18,20,30,32,34,35,44,57,60 stroke:#CDDC39,stroke-width:2px
+  linkStyle 13,15,17,27,46,50,63,71 stroke:#FF9800,stroke-width:2px
+
+```
