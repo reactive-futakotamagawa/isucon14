@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bytedance/sonic"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -94,7 +95,14 @@ func getTokenFromAuthorizationHeader(r *http.Request) (string, error) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error(err.Error())
+
+	data2, err := sonic.Marshal(v)
+	if err != nil {
+		slog.Error("failed to marshal JSON", err)
+		return
+	}
+
+	if _, writeErr := w.Write(data2); writeErr != nil {
+		slog.Error("failed to write response", writeErr)
 	}
 }
