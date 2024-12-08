@@ -21,7 +21,7 @@ type paymentGatewayGetPaymentsResponseOne struct {
 	Status string `json:"status"`
 }
 
-func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
+func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
 	b, err := json.Marshal(param)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 	retry := 0
 	for {
 		err := func() error {
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(b))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.paymentGatewayURL+"/payments", bytes.NewBuffer(b))
 			if err != nil {
 				return err
 			}
@@ -47,7 +47,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 
 			if res.StatusCode != http.StatusNoContent {
 				// エラーが返ってきても成功している場合があるので、社内決済マイクロサービスに問い合わせ
-				getReq, err := http.NewRequestWithContext(ctx, http.MethodGet, paymentGatewayURL+"/payments", bytes.NewBuffer([]byte{}))
+				getReq, err := http.NewRequestWithContext(ctx, http.MethodGet, h.paymentGatewayURL+"/payments", bytes.NewBuffer([]byte{}))
 				if err != nil {
 					return err
 				}
