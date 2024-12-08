@@ -184,6 +184,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 				TotalDistance: abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.TotalDistance,
 				ChairID:       location.ChairID,
 				CreatedAt:     location.CreatedAt,
+				UpdatedAt:     location.CreatedAt,
 			}
 		}
 

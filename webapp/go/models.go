@@ -90,4 +90,5 @@ type TotalDistance struct {
 	ChairID       string    `db:"chair_id"`
 	TotalDistance int       `db:"total_distance"`
 	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
 }
