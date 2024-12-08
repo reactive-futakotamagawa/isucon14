@@ -59,7 +59,7 @@ func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, r
 		return nil, err
 	}
 	afterCommit := func(ctx context.Context) error {
-		m.scacheByRideID.Notify(ctx, rideID)
+		m.scacheByRideID.Notify(context.Background(), rideID)
 		return nil
 	}
 	return afterCommit, nil
@@ -81,7 +81,7 @@ func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *s
 			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
-		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
+		m.scacheByRideID.Notify(context.Background(), rideStatus.RideID)
 		return nil
 	}
 	return afterCommit, err
@@ -103,7 +103,7 @@ func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx 
 			slog.ErrorContext(ctx, "failed to get ride status", "err", err)
 			return err
 		}
-		m.scacheByRideID.Notify(ctx, rideStatus.RideID)
+		m.scacheByRideID.Notify(context.Background(), rideStatus.RideID)
 		return nil
 	}
 	return afterCommit, err
