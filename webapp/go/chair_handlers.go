@@ -211,7 +211,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 
 	if err := tx.GetContext(ctx, "db1", &yetSentRideStatus, `SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
