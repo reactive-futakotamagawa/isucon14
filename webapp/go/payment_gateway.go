@@ -83,7 +83,7 @@ func (h *apiHandler) requestPaymentGatewayPostPayment(ctx context.Context, token
 		}
 		if retry < 5 {
 			retry++
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 			continue
 		} else {
 			return err
