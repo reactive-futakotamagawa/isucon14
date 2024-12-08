@@ -671,7 +671,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	yetSentRideStatus, err := h.findRideStatusYetSentByApp(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = h.getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
