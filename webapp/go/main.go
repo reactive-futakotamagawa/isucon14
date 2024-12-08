@@ -19,7 +19,7 @@ import (
 	"github.com/kaz/pprotein/integration/standalone"
 )
 
-var db *sqlx.DB
+// var db *sqlx.DB
 
 func main() {
 	go standalone.Integrate(":8888")
@@ -62,11 +62,10 @@ func setup() http.Handler {
 	dbConfig.DBName = dbname
 	dbConfig.ParseTime = true
 
-	_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
+	db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
 	if err != nil {
 		panic(err)
 	}
-	db = _db
 
 	h := newHandler(db)
 	mux := chi.NewRouter()
