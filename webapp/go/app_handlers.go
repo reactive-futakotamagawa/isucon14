@@ -599,13 +599,11 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		Amount: fare,
 	}
 
-	if err := requestPaymentGatewayPostPayment(ctx, h.paymentGatewayURL, paymentToken.Token, paymentGatewayRequest, func() ([]Ride, error) {
-		rides := []Ride{}
-		if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE user_id = ? ORDER BY created_at ASC`, ride.UserID); err != nil {
-			return nil, err
-		}
-		return rides, nil
-	}); err != nil {
+	var ridesCount int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM rides WHERE user_id = ? ORDER BY created_at ASC`, ride.UserID).Scan(&ridesCount); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+	}
+	if err := h.requestPaymentGatewayPostPayment(ctx, paymentToken.Token, paymentGatewayRequest, ridesCount); err != nil {
 		if errors.Is(err, erroredUpstream) {
 			writeError(w, http.StatusBadGateway, err)
 			return
