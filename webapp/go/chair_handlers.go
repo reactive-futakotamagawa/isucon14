@@ -20,7 +20,7 @@ type chairPostChairsResponse struct {
 	OwnerID string `json:"owner_id"`
 }
 
-func chairPostChairs(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &chairPostChairsRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -33,7 +33,7 @@ func chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	owner := &Owner{}
-	if err := db.GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
+	if err := h.db.GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusUnauthorized, errors.New("invalid chair_register_token"))
 			return
@@ -45,7 +45,7 @@ func chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	chairID := ulid.Make().String()
 	accessToken := secureRandomStr(32)
 
-	_, err := db.ExecContext(
+	_, err := h.db.ExecContext(
 		ctx,
 		"INSERT INTO chairs (id, owner_id, name, model, is_active, access_token) VALUES (?, ?, ?, ?, ?, ?)",
 		chairID, owner.ID, req.Name, req.Model, false, accessToken,
@@ -71,7 +71,7 @@ type postChairActivityRequest struct {
 	IsActive bool `json:"is_active"`
 }
 
-func chairPostActivity(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) chairPostActivity(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chair").(*Chair)
 
@@ -81,7 +81,7 @@ func chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := db.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
+	_, err := h.db.ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -94,7 +94,7 @@ type chairPostCoordinateResponse struct {
 	RecordedAt int64 `json:"recorded_at"`
 }
 
-func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &Coordinate{}
 	if err := bindJSON(r, req); err != nil {
@@ -104,7 +104,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 
 	chair := ctx.Value("chair").(*Chair)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -184,11 +184,11 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
-func chairGetNotification(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chair").(*Chair)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -269,7 +269,7 @@ type postChairRidesRideIDStatusRequest struct {
 	Status string `json:"status"`
 }
 
-func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rideID := r.PathValue("ride_id")
 
@@ -281,7 +281,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

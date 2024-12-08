@@ -24,7 +24,7 @@ type ownerPostOwnersResponse struct {
 	ChairRegisterToken string `json:"chair_register_token"`
 }
 
-func ownerPostOwners(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) ownerPostOwners(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &ownerPostOwnersRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -40,7 +40,7 @@ func ownerPostOwners(w http.ResponseWriter, r *http.Request) {
 	accessToken := secureRandomStr(32)
 	chairRegisterToken := secureRandomStr(32)
 
-	_, err := db.ExecContext(
+	_, err := h.db.ExecContext(
 		ctx,
 		"INSERT INTO owners (id, name, access_token, chair_register_token) VALUES (?, ?, ?, ?)",
 		ownerID, req.Name, accessToken, chairRegisterToken,
@@ -79,7 +79,7 @@ type ownerGetSalesResponse struct {
 	Models     []modelSales `json:"models"`
 }
 
-func ownerGetSales(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	since := time.Unix(0, 0)
 	until := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
@@ -102,7 +102,7 @@ func ownerGetSales(w http.ResponseWriter, r *http.Request) {
 
 	owner := r.Context().Value("owner").(*Owner)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -164,16 +164,16 @@ func calculateSale(ride Ride) int {
 }
 
 type chairWithDetail struct {
-	ID                     string       `db:"id"`
-	OwnerID                string       `db:"owner_id"`
-	Name                   string       `db:"name"`
-	AccessToken            string       `db:"access_token"`
-	Model                  string       `db:"model"`
-	IsActive               bool         `db:"is_active"`
-	CreatedAt              time.Time    `db:"created_at"`
-	UpdatedAt              time.Time    `db:"updated_at"`
-	TotalDistance          int          `db:"total_distance"`
-	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
+	ID                     string       `h.db:"id"`
+	OwnerID                string       `h.db:"owner_id"`
+	Name                   string       `h.db:"name"`
+	AccessToken            string       `h.db:"access_token"`
+	Model                  string       `h.db:"model"`
+	IsActive               bool         `h.db:"is_active"`
+	CreatedAt              time.Time    `h.db:"created_at"`
+	UpdatedAt              time.Time    `h.db:"updated_at"`
+	TotalDistance          int          `h.db:"total_distance"`
+	TotalDistanceUpdatedAt sql.NullTime `h.db:"total_distance_updated_at"`
 }
 
 type ownerGetChairResponse struct {
@@ -190,12 +190,12 @@ type ownerGetChairResponseChair struct {
 	TotalDistanceUpdatedAt *int64 `json:"total_distance_updated_at,omitempty"`
 }
 
-func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
 
 	chairs := []chairWithDetail{}
-	if err := db.SelectContext(ctx, &chairs, `SELECT id,
+	if err := h.db.SelectContext(ctx, &chairs, `SELECT id,
        owner_id,
        name,
        access_token,

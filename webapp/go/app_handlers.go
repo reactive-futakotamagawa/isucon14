@@ -25,7 +25,7 @@ type appPostUsersResponse struct {
 	InvitationCode string `json:"invitation_code"`
 }
 
-func appPostUsers(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appPostUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostUsersRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -41,7 +41,7 @@ func appPostUsers(w http.ResponseWriter, r *http.Request) {
 	accessToken := secureRandomStr(32)
 	invitationCode := secureRandomStr(15)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -138,7 +138,7 @@ type appPostPaymentMethodsRequest struct {
 	Token string `json:"token"`
 }
 
-func appPostPaymentMethods(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appPostPaymentMethods(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostPaymentMethodsRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -152,7 +152,7 @@ func appPostPaymentMethods(w http.ResponseWriter, r *http.Request) {
 
 	user := ctx.Value("user").(*User)
 
-	_, err := db.ExecContext(
+	_, err := h.db.ExecContext(
 		ctx,
 		`INSERT INTO payment_tokens (user_id, token) VALUES (?, ?)`,
 		user.ID,
@@ -188,11 +188,11 @@ type getAppRidesResponseItemChair struct {
 	Model string `json:"model"`
 }
 
-func appGetRides(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user := ctx.Value("user").(*User)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -291,7 +291,7 @@ func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (
 	return status, nil
 }
 
-func appPostRides(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -306,7 +306,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 	user := ctx.Value("user").(*User)
 	rideID := ulid.Make().String()
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -448,7 +448,7 @@ type appPostRidesEstimatedFareResponse struct {
 	Discount int `json:"discount"`
 }
 
-func appPostRidesEstimatedFare(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appPostRidesEstimatedFare(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesEstimatedFareRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -462,7 +462,7 @@ func appPostRidesEstimatedFare(w http.ResponseWriter, r *http.Request) {
 
 	user := ctx.Value("user").(*User)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -505,7 +505,7 @@ type appPostRideEvaluationResponse struct {
 	CompletedAt int64 `json:"completed_at"`
 }
 
-func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rideID := r.PathValue("ride_id")
 
@@ -519,7 +519,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -658,11 +658,11 @@ type appGetNotificationResponseChairStats struct {
 	TotalEvaluationAvg float64 `json:"total_evaluation_avg"`
 }
 
-func appGetNotification(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user := ctx.Value("user").(*User)
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -831,7 +831,7 @@ type appGetNearbyChairsResponseChair struct {
 	CurrentCoordinate Coordinate `json:"current_coordinate"`
 }
 
-func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
+func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	latStr := r.URL.Query().Get("latitude")
 	lonStr := r.URL.Query().Get("longitude")
@@ -864,7 +864,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 	coordinate := Coordinate{Latitude: lat, Longitude: lon}
 
-	tx, err := db.Beginx()
+	tx, err := h.db.Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

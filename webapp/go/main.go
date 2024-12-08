@@ -68,48 +68,49 @@ func setup() http.Handler {
 	}
 	db = _db
 
+	h := newHandler(db)
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
-	mux.HandleFunc("POST /api/initialize", postInitialize)
+	mux.HandleFunc("POST /api/initialize", h.postInitialize)
 
 	// app handlers
 	{
-		mux.HandleFunc("POST /api/app/users", appPostUsers)
+		mux.HandleFunc("POST /api/app/users", h.appPostUsers)
 
-		authedMux := mux.With(appAuthMiddleware)
-		authedMux.HandleFunc("POST /api/app/payment-methods", appPostPaymentMethods)
-		authedMux.HandleFunc("GET /api/app/rides", appGetRides)
-		authedMux.HandleFunc("POST /api/app/rides", appPostRides)
-		authedMux.HandleFunc("POST /api/app/rides/estimated-fare", appPostRidesEstimatedFare)
-		authedMux.HandleFunc("POST /api/app/rides/{ride_id}/evaluation", appPostRideEvaluatation)
-		authedMux.HandleFunc("GET /api/app/notification", appGetNotification)
-		authedMux.HandleFunc("GET /api/app/nearby-chairs", appGetNearbyChairs)
+		authedMux := mux.With(h.appAuthMiddleware)
+		authedMux.HandleFunc("POST /api/app/payment-methods", h.appPostPaymentMethods)
+		authedMux.HandleFunc("GET /api/app/rides", h.appGetRides)
+		authedMux.HandleFunc("POST /api/app/rides", h.appPostRides)
+		authedMux.HandleFunc("POST /api/app/rides/estimated-fare", h.appPostRidesEstimatedFare)
+		authedMux.HandleFunc("POST /api/app/rides/{ride_id}/evaluation", h.appPostRideEvaluatation)
+		authedMux.HandleFunc("GET /api/app/notification", h.appGetNotification)
+		authedMux.HandleFunc("GET /api/app/nearby-chairs", h.appGetNearbyChairs)
 	}
 
 	// owner handlers
 	{
-		mux.HandleFunc("POST /api/owner/owners", ownerPostOwners)
+		mux.HandleFunc("POST /api/owner/owners", h.ownerPostOwners)
 
-		authedMux := mux.With(ownerAuthMiddleware)
-		authedMux.HandleFunc("GET /api/owner/sales", ownerGetSales)
-		authedMux.HandleFunc("GET /api/owner/chairs", ownerGetChairs)
+		authedMux := mux.With(h.ownerAuthMiddleware)
+		authedMux.HandleFunc("GET /api/owner/sales", h.ownerGetSales)
+		authedMux.HandleFunc("GET /api/owner/chairs", h.ownerGetChairs)
 	}
 
 	// chair handlers
 	{
-		mux.HandleFunc("POST /api/chair/chairs", chairPostChairs)
+		mux.HandleFunc("POST /api/chair/chairs", h.chairPostChairs)
 
-		authedMux := mux.With(chairAuthMiddleware)
-		authedMux.HandleFunc("POST /api/chair/activity", chairPostActivity)
-		authedMux.HandleFunc("POST /api/chair/coordinate", chairPostCoordinate)
-		authedMux.HandleFunc("GET /api/chair/notification", chairGetNotification)
-		authedMux.HandleFunc("POST /api/chair/rides/{ride_id}/status", chairPostRideStatus)
+		authedMux := mux.With(h.chairAuthMiddleware)
+		authedMux.HandleFunc("POST /api/chair/activity", h.chairPostActivity)
+		authedMux.HandleFunc("POST /api/chair/coordinate", h.chairPostCoordinate)
+		authedMux.HandleFunc("GET /api/chair/notification", h.chairGetNotification)
+		authedMux.HandleFunc("POST /api/chair/rides/{ride_id}/status", h.chairPostRideStatus)
 	}
 
 	// internal handlers
 	{
-		mux.HandleFunc("GET /api/internal/matching", internalGetMatching)
+		mux.HandleFunc("GET /api/internal/matching", h.internalGetMatching)
 	}
 
 	return mux
@@ -123,7 +124,15 @@ type postInitializeResponse struct {
 	Language string `json:"language"`
 }
 
-func postInitialize(w http.ResponseWriter, r *http.Request) {
+type apiHandler struct {
+	db *sqlx.DB
+}
+
+func newHandler(db *sqlx.DB) *apiHandler {
+	return &apiHandler{db}
+}
+
+func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if _, err := http.Get("https://p.isu.ikura-hamu.work/api/group/collect"); err != nil {
 			log.Printf("failed to communicate with pprotein: %v", err)
@@ -142,7 +151,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
+	if _, err := h.db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
