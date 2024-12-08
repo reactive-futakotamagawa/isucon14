@@ -25,7 +25,30 @@ func main() {
 	go standalone.Integrate(":8888")
 	mux := setup()
 	slog.Info("Listening on :8080")
-	http.ListenAndServe(":8080", mux)
+
+	if os.Getenv("USE_SOCKET") == "1" {
+		fmt.Println("USE_SOCKET")
+
+		// ここからソケット接続設定 ---
+		socket_file := "/tmp/app.sock"
+		os.Remove(socket_file)
+
+		l, err := net.Listen("unix", socket_file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// go runユーザとnginxのユーザ（グループ）を同じにすれば777じゃなくてok
+		err = os.Chmod(socket_file, 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		http.Serve(l, mux)
+		// ここまで ---
+	} else {
+		http.ListenAndServe(":8080", mux)
+	}
 }
 
 func setup() http.Handler {
