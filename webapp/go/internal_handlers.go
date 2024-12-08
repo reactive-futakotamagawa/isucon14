@@ -23,7 +23,7 @@ func (h *apiHandler) internalGetMatching(w http.ResponseWriter, r *http.Request)
 	}
 
 	var activeChairs []Chair
-	if err := h.db.SelectContext(ctx, &activeChairs, "SELECT * FROM chairs WHERE is_active = TRUE"); err != nil {
+	if err := h.db2.SelectContext(ctx, &activeChairs, "SELECT * FROM chairs WHERE is_active = TRUE"); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
