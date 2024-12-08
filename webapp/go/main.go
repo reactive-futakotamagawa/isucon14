@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net"
@@ -164,7 +166,15 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 
 	// サーバー2のdbInitializeにリクエストを転送
 	server2URL := "http://192.168.0.12:8080/api/db/initialize"
-	server2Req, err := http.NewRequestWithContext(ctx, "POST", server2URL, r.Body)
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to read request body for server2: %w", err))
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	server2Req, err := http.NewRequestWithContext(ctx, "POST", server2URL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to create request to server2: %w", err))
 		return
@@ -180,11 +190,11 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	defer server2Resp.Body.Close()
 
 	if server2Resp.StatusCode != http.StatusOK {
-		writeError(w, http.StatusAlreadyReported, fmt.Errorf("server2 returned status code %d", server2Resp.StatusCode))
+		body, _ := io.ReadAll(server2Resp.Body)
+		writeError(w, server2Resp.StatusCode, fmt.Errorf("server2 returned status code %d: %s", server2Resp.StatusCode, string(body)))
 		return
 	}
 
-	// レスポンスを返す
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
 
