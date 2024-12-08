@@ -53,12 +53,14 @@ func (h *apiHandler) initRideStatusManager(ctx context.Context) error {
 }
 
 func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) (afterCommitFunc, error) {
+	slog.InfoContext(ctx, "creating ride status", "rideID", rideID, "status", status)
 	id := ulid.Make().String()
 	_, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", id, rideID, status)
 	if err != nil {
 		return nil, err
 	}
 	afterCommit := func(ctx context.Context) error {
+		slog.InfoContext(ctx, "update ride status", "rideID", rideID)
 		m.scacheByRideID.Notify(context.Background(), rideID)
 		return nil
 	}
