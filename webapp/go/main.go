@@ -194,7 +194,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(allTotalDistances) > 0 {
-			_, err = h.db.NamedExecContext(ctx, "INSERT INTO chair_total_distance (chair_id, total_distance, created_at) VALUES (:chair_id, :total_distance, :created_at)", allTotalDistances)
+			_, err = h.db.NamedExecContext(ctx, "INSERT INTO chair_total_distance (chair_id, total_distance, created_at, updated_at) VALUES (:chair_id, :total_distance, :created_at, :updated_at)", allTotalDistances)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
