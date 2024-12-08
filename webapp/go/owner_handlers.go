@@ -220,7 +220,7 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chairLocations := []ChairLocation{}
-	if err := h.db.SelectContext(ctx, &chairLocations, query, args...); err != nil {
+	if err := h.db2.SelectContext(ctx, &chairLocations, query, args...); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
