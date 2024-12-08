@@ -134,7 +134,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	} else {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -211,7 +211,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 	yetSentRideStatus, err := h.findRideStatusYetSentByChair(ctx, tx, ride.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -312,7 +312,7 @@ func (h *apiHandler) chairPostRideStatus(w http.ResponseWriter, r *http.Request)
 		}
 	// After Picking up user
 	case "CARRYING":
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return

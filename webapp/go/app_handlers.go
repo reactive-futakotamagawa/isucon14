@@ -212,7 +212,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -283,14 +283,6 @@ type executableGet interface {
 	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
-func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (string, error) {
-	status := ""
-	if err := tx.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
-		return "", err
-	}
-	return status, nil
-}
-
 func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesRequest{}
@@ -321,7 +313,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 
 	continuingRideCount := 0
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -531,7 +523,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	status, err := getLatestRideStatus(ctx, tx, ride.ID)
+	status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -669,7 +661,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	yetSentRideStatus, err := h.findRideStatusYetSentByApp(ctx, tx, ride.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = getLatestRideStatus(ctx, tx, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -910,7 +902,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := getLatestRideStatus(ctx, tx, ride.ID)
+			status, err := h.getLatestRideStatus(ctx, tx, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
