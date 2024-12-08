@@ -124,11 +124,16 @@ type postInitializeResponse struct {
 }
 
 type apiHandler struct {
-	db *sqlx.DB
+	db                *sqlx.DB
+	paymentGatewayURL string
 }
 
 func newHandler(db *sqlx.DB) *apiHandler {
-	return &apiHandler{db}
+	return &apiHandler{
+		db: db,
+		// dummy
+		paymentGatewayURL: "http://localhost:12345",
+	}
 }
 
 func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +159,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.paymentGatewayURL = req.PaymentServer
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
