@@ -156,8 +156,9 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				} else {
+					af := afterCommit
 					afterCommit = func(ctx context.Context) error {
-						if err := afterCommit(ctx); err != nil {
+						if err := af(ctx); err != nil {
 							return err
 						}
 						return ac(ctx)
