@@ -754,55 +754,84 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, response)
 }
 
+type getChairStatsStruct struct {
+	RideID     string        `db:"ride_id"`
+	Evaluation sql.NullInt64 `db:"evaluation"`
+	Status     string        `db:"status"`
+	CreatedAt  time.Time     `db:"created_at"`
+	UpdatedAt  time.Time     `db:"updated_at"`
+}
+
 func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNotificationResponseChairStats, error) {
 	stats := appGetNotificationResponseChairStats{}
 
-	rides := []Ride{}
-	err := tx.SelectContext(
-		ctx,
-		&rides,
-		`SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC`,
-		chairID,
-	)
-	if err != nil {
+	rows := []getChairStatsStruct{}
+
+	query := `
+		SELECT 
+			r.id AS ride_id,
+			r.evaluation,
+			rs.status,
+			rs.created_at,
+			r.updated_at
+		FROM rides r
+		LEFT JOIN ride_statuses rs ON r.id = rs.ride_id
+		WHERE r.chair_id = ?
+		ORDER BY r.updated_at DESC, rs.created_at ASC
+	`
+
+	if err := tx.SelectContext(ctx, &rows, query, chairID); err != nil {
 		return stats, err
 	}
 
 	totalRideCount := 0
 	totalEvaluation := 0.0
-	for _, ride := range rides {
-		rideStatuses := []RideStatus{}
-		err = tx.SelectContext(
-			ctx,
-			&rideStatuses,
-			`SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at`,
-			ride.ID,
-		)
-		if err != nil {
-			return stats, err
+
+	rideData := make(map[string]struct {
+		ArrivedAt   *time.Time
+		PickupedAt  *time.Time
+		IsCompleted bool
+		Evaluation  sql.NullInt64
+	})
+
+	for _, row := range rows {
+		data, exists := rideData[row.RideID]
+		if !exists {
+			data = struct {
+				ArrivedAt   *time.Time
+				PickupedAt  *time.Time
+				IsCompleted bool
+				Evaluation  sql.NullInt64
+			}{
+				Evaluation: row.Evaluation,
+			}
 		}
 
-		var arrivedAt, pickupedAt *time.Time
-		var isCompleted bool
-		for _, status := range rideStatuses {
-			if status.Status == "ARRIVED" {
-				arrivedAt = &status.CreatedAt
-			} else if status.Status == "CARRYING" {
-				pickupedAt = &status.CreatedAt
+		switch row.Status {
+		case "ARRIVED":
+			if data.ArrivedAt == nil {
+				data.ArrivedAt = &row.CreatedAt
 			}
-			if status.Status == "COMPLETED" {
-				isCompleted = true
+		case "CARRYING":
+			if data.PickupedAt == nil {
+				data.PickupedAt = &row.CreatedAt
 			}
+		case "COMPLETED":
+			data.IsCompleted = true
 		}
-		if arrivedAt == nil || pickupedAt == nil {
-			continue
-		}
-		if !isCompleted {
+
+		rideData[row.RideID] = data
+	}
+
+	for _, data := range rideData {
+		if data.ArrivedAt == nil || data.PickupedAt == nil || !data.IsCompleted {
 			continue
 		}
 
 		totalRideCount++
-		totalEvaluation += float64(*ride.Evaluation)
+		if data.Evaluation.Valid {
+			totalEvaluation += float64(data.Evaluation.Int64)
+		}
 	}
 
 	stats.TotalRidesCount = totalRideCount
