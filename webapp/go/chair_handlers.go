@@ -124,8 +124,8 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	}
 
 	addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
-	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, distance) VALUES (?, ?)
-		ON DUPLICATE KEY UPDATE distance = distance + ?`,
+	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)
+		ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
 		chair.ID, addDistance, addDistance)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
