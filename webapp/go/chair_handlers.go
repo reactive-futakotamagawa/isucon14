@@ -232,7 +232,7 @@ func (h *apiHandler) chairGetNotification(w http.ResponseWriter, r *http.Request
 	}
 
 	if yetSentRideStatus.ID != "" {
-		_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
+		err := h.updateRideStatusChairSentAt(ctx, tx, yetSentRideStatus.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return

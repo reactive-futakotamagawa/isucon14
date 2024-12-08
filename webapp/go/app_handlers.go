@@ -729,7 +729,7 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if yetSentRideStatus.ID != "" {
-		_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
+		err := h.updateRideStatusAppSentAt(ctx, tx, yetSentRideStatus.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
