@@ -117,19 +117,18 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		lastLocation = &ChairLocation{
-			Latitude:  0,
-			Longitude: 0,
+		_, err := tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)`, chair.ID, 0)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
 		}
-	}
-
-	addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
-	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)
-		ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
-		chair.ID, 0, addDistance)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
+	} else {
+		addDistance := abs(lastLocation.Latitude-req.Latitude) + abs(lastLocation.Longitude-req.Longitude)
+		_, err = tx.ExecContext(ctx, `UPDATE chair_total_distance SET total_distance = total_distance + ? WHERE chair_id = ?`, addDistance, chair.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 	}
 
 	chairLocationID := ulid.Make().String()
