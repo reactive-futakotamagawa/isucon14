@@ -44,6 +44,7 @@ func newRideStatusManager(ctx context.Context, db *sqlx.DB) (*rideStatusManager,
 func (h *apiHandler) initRideStatusManager(ctx context.Context) error {
 	rideStatus, err := newRideStatusManager(ctx, h.db)
 	if err != nil {
+		slog.ErrorContext(ctx, "failed to initialize ride status manager", "err", err)
 		return err
 	}
 	h.rideStatus = rideStatus
