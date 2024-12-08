@@ -1,0 +1,879 @@
+{
+  "chairs": [
+    {
+      "id": "01JDFEF7MGXXCJKW1MNJXPA77A",
+      "name": "QC-L13-8361",
+      "model": "クエストチェア Lite",
+      "active": false,
+      "registered_at": 1732464058000,
+      "total_distance": 128,
+      "total_distance_updated_at": 1732596702000
+    },
+    {
+      "id": "01JDFEXJM006PH4C1EVHJ31QMV",
+      "name": "LC-48-2566",
+      "model": "Legacy Chair",
+      "active": false,
+      "registered_at": 1732464528000,
+      "total_distance": 107,
+      "total_distance_updated_at": 1732608215000
+    },
+    {
+      "id": "01JDFGTKR0586QH1QGXRACGB80",
+      "name": "IS-33-8740",
+      "model": "Infinity Seat",
+      "active": false,
+      "registered_at": 1732466528000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDFH6WAGA8EEG0N6VPDRPCP7",
+      "name": "SL-GX32-8113",
+      "model": "スリムライン GX",
+      "active": false,
+      "registered_at": 1732466930000,
+      "total_distance": 428,
+      "total_distance_updated_at": 1732587097000
+    },
+    {
+      "id": "01JDFK1BDGV57XYXDMZVW1DWJK",
+      "name": "SF-01-1138",
+      "model": "スピンフレーム 01",
+      "active": false,
+      "registered_at": 1732468846000,
+      "total_distance": 275,
+      "total_distance_updated_at": 1732565234000
+    },
+    {
+      "id": "01JDFKF1WR5S48N2V9GN1466TD",
+      "name": "CB-09-3316",
+      "model": "ComfortBasic",
+      "active": false,
+      "registered_at": 1732469295000,
+      "total_distance": 57,
+      "total_distance_updated_at": 1732626023000
+    },
+    {
+      "id": "01JDFKQDF8J79C07FTFK4W3F3B",
+      "name": "PU-46-8661",
+      "model": "Phoenix Ultra",
+      "active": false,
+      "registered_at": 1732469569000,
+      "total_distance": 84,
+      "total_distance_updated_at": 1732621972000
+    },
+    {
+      "id": "01JDFMB5A0YEPP983PQ2KV50BC",
+      "name": "AS-14-2377",
+      "model": "AeroSeat",
+      "active": false,
+      "registered_at": 1732470216000,
+      "total_distance": 88,
+      "total_distance_updated_at": 1732610870000
+    },
+    {
+      "id": "01JDFPJKE8P6CPSMZRPYQF94ZP",
+      "name": "EF-22-8927",
+      "model": "ErgoFlex",
+      "active": false,
+      "registered_at": 1732472557000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDFQ1TR0WRQT71GFHJXK1PMN",
+      "name": "IC-LX38-2325",
+      "model": "インペリアルクラフト LUXE",
+      "active": false,
+      "registered_at": 1732473056000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDFRHA905GZD4VCQVHVEV51Y",
+      "name": "TF-U47-4143",
+      "model": "タイタンフレーム ULTRA",
+      "active": false,
+      "registered_at": 1732474612000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDFRJ0QRSM1GK8JBRAQD3HX1",
+      "name": "CA-S03-8875",
+      "model": "チェアエース S",
+      "active": false,
+      "registered_at": 1732474635000,
+      "total_distance": 144,
+      "total_distance_updated_at": 1732581823000
+    },
+    {
+      "id": "01JDFTB9R0PCKWAJAZBSY6148B",
+      "name": "BS-PL04-5466",
+      "model": "ベーシックスツール プラス",
+      "active": false,
+      "registered_at": 1732476512000,
+      "total_distance": 384,
+      "total_distance_updated_at": 1732589917000
+    },
+    {
+      "id": "01JDFVGD80DYSRK1R4ZKHD4N6M",
+      "name": "ES-RG40-9640",
+      "model": "エコシート リジェネレイト",
+      "active": false,
+      "registered_at": 1732477728000,
+      "total_distance": 112,
+      "total_distance_updated_at": 1732567890000
+    },
+    {
+      "id": "01JDFX3G0GFR14N1AJF7KR9Y90",
+      "name": "CA-S03-1770",
+      "model": "チェアエース S",
+      "active": false,
+      "registered_at": 1732479402000,
+      "total_distance": 289,
+      "total_distance_updated_at": 1732591327000
+    },
+    {
+      "id": "01JDFYDNM0HWKK140PQDHA89B7",
+      "name": "AS-14-9261",
+      "model": "AeroSeat",
+      "active": false,
+      "registered_at": 1732480784000,
+      "total_distance": 191,
+      "total_distance_updated_at": 1732601116000
+    },
+    {
+      "id": "01JDFZDSY8VJBY7PATGWDYD190",
+      "name": "TL-35-9215",
+      "model": "Titanium Line",
+      "active": false,
+      "registered_at": 1732481837000,
+      "total_distance": 230,
+      "total_distance_updated_at": 1732627649000
+    },
+    {
+      "id": "01JDFZYA8GF3XYCW4PH7HVAHDT",
+      "name": "FG-C24-433",
+      "model": "風雅（ふうが）チェア",
+      "active": false,
+      "registered_at": 1732482378000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDG08BHRN4ABRDAM8N438G69",
+      "name": "ZC-36-7713",
+      "model": "ZenComfort",
+      "active": false,
+      "registered_at": 1732482707000,
+      "total_distance": 200,
+      "total_distance_updated_at": 1732601591000
+    },
+    {
+      "id": "01JDG0SS5GRWBNZP9Y613AQ4NN",
+      "name": "GS-NX16-1970",
+      "model": "ゲーミングシート NEXUS",
+      "active": false,
+      "registered_at": 1732483278000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDG1NYH82KFBCABGE0G3CC65",
+      "name": "BP-23-4754",
+      "model": "BalancePro",
+      "active": false,
+      "registered_at": 1732484201000,
+      "total_distance": 127,
+      "total_distance_updated_at": 1732589628000
+    },
+    {
+      "id": "01JDG3REF0H2VQ9GV92N32DCV2",
+      "name": "LL-06-5093",
+      "model": "LiteLine",
+      "active": false,
+      "registered_at": 1732486380000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDG44WX0VRJGK7H6VWB1D38B",
+      "name": "SF-01-4482",
+      "model": "スピンフレーム 01",
+      "active": false,
+      "registered_at": 1732486788000,
+      "total_distance": 39,
+      "total_distance_updated_at": 1732603998000
+    },
+    {
+      "id": "01JDG4DQ48GECTFQSTF590ANM6",
+      "name": "FC-P18-2210",
+      "model": "フレックスコンフォート PRO",
+      "active": false,
+      "registered_at": 1732487077000,
+      "total_distance": 197,
+      "total_distance_updated_at": 1732569416000
+    },
+    {
+      "id": "01JDG5GP8REX38T5RAJFZ5RAXD",
+      "name": "EF-22-2931",
+      "model": "ErgoFlex",
+      "active": false,
+      "registered_at": 1732488223000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDG6G62RGB2VJQR1EEP9H216",
+      "name": "SS-R39-7683",
+      "model": "ステルスシート ROGUE",
+      "active": false,
+      "registered_at": 1732489255000,
+      "total_distance": 46,
+      "total_distance_updated_at": 1732597397000
+    },
+    {
+      "id": "01JDG6JK7GNXR9W9HHVPWQYM9E",
+      "name": "IG-V42-5693",
+      "model": "インフィニティ GEAR V",
+      "active": false,
+      "registered_at": 1732489334000,
+      "total_distance": 57,
+      "total_distance_updated_at": 1732609795000
+    },
+    {
+      "id": "01JDG6WPF81EGY9RMHTXAQQVGG",
+      "name": "RZ-07-1829",
+      "model": "リラックス座",
+      "active": false,
+      "registered_at": 1732489665000,
+      "total_distance": 124,
+      "total_distance_updated_at": 1732598241000
+    },
+    {
+      "id": "01JDG7P6W8HZQAVF9ZVES6EMMW",
+      "name": "RS-NEO01-7391",
+      "model": "リラックスシート NEO",
+      "active": false,
+      "registered_at": 1732490501000,
+      "total_distance": 209,
+      "total_distance_updated_at": 1732566394000
+    },
+    {
+      "id": "01JDG82GE0QR7MQR61SEXA8W7J",
+      "name": "SS-11-7018",
+      "model": "StyleSit",
+      "active": false,
+      "registered_at": 1732490904000,
+      "total_distance": 400,
+      "total_distance_updated_at": 1732611083000
+    },
+    {
+      "id": "01JDGA8FP8FAGPKV01EE2WY58P",
+      "name": "AS-14-9316",
+      "model": "AeroSeat",
+      "active": false,
+      "registered_at": 1732493197000,
+      "total_distance": 80,
+      "total_distance_updated_at": 1732600508000
+    },
+    {
+      "id": "01JDGBAZ6RQQWF0J8XGSK2SSXA",
+      "name": "AS-LT02-4890",
+      "model": "エアシェル ライト",
+      "active": false,
+      "registered_at": 1732494327000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGBBVH0WQG2RBSGZAP9F1GH",
+      "name": "OP-43-639",
+      "model": "オブシディアン PRIME",
+      "active": false,
+      "registered_at": 1732494356000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGBCZN814W0NXW13CYR18XZ",
+      "name": "OP-43-7200",
+      "model": "オブシディアン PRIME",
+      "active": false,
+      "registered_at": 1732494393000,
+      "total_distance": 296,
+      "total_distance_updated_at": 1732608834000
+    },
+    {
+      "id": "01JDGBXQSGCKDDRRE184N7K7G5",
+      "name": "MC-R30-996",
+      "model": "モーションチェア RISE",
+      "active": false,
+      "registered_at": 1732494942000,
+      "total_distance": 168,
+      "total_distance_updated_at": 1732626575000
+    },
+    {
+      "id": "01JDGC72M02NS31M9HXYTN3AN6",
+      "name": "TZ-PL51-9463",
+      "model": "匠座 PRO LIMITED",
+      "active": false,
+      "registered_at": 1732495248000,
+      "total_distance": 158,
+      "total_distance_updated_at": 1732616356000
+    },
+    {
+      "id": "01JDGDAS6GM14P09XWYWAF7SWV",
+      "name": "FC-P18-9254",
+      "model": "フレックスコンフォート PRO",
+      "active": false,
+      "registered_at": 1732496418000,
+      "total_distance": 182,
+      "total_distance_updated_at": 1732603271000
+    },
+    {
+      "id": "01JDGDRQFRGX8GM3CR68ZZM0A8",
+      "name": "ES-08-5733",
+      "model": "EasySit",
+      "active": false,
+      "registered_at": 1732496875000,
+      "total_distance": 74,
+      "total_distance_updated_at": 1732611059000
+    },
+    {
+      "id": "01JDGDT4D8YYDPX14E79Q0EPNE",
+      "name": "FC-P18-3655",
+      "model": "フレックスコンフォート PRO",
+      "active": false,
+      "registered_at": 1732496921000,
+      "total_distance": 12,
+      "total_distance_updated_at": 1732582807000
+    },
+    {
+      "id": "01JDGEKKV0J0S5KS9C852QYCK3",
+      "name": "GA-31-2152",
+      "model": "雅楽座",
+      "active": false,
+      "registered_at": 1732497756000,
+      "total_distance": 486,
+      "total_distance_updated_at": 1732559866000
+    },
+    {
+      "id": "01JDGFHGW0Z32WC9Z8ZFZ43SV4",
+      "name": "ES-08-268",
+      "model": "EasySit",
+      "active": false,
+      "registered_at": 1732498736000,
+      "total_distance": 200,
+      "total_distance_updated_at": 1732576202000
+    },
+    {
+      "id": "01JDGFKZ009K2JHAN9JFMV5VQZ",
+      "name": "SG-S120-9146",
+      "model": "ストリームギア S1",
+      "active": false,
+      "registered_at": 1732498816000,
+      "total_distance": 122,
+      "total_distance_updated_at": 1732572662000
+    },
+    {
+      "id": "01JDGFTB38REM072NY9Y3VN169",
+      "name": "PE-X129-807",
+      "model": "プロゲーマーエッジ X1",
+      "active": false,
+      "registered_at": 1732499025000,
+      "total_distance": 170,
+      "total_distance_updated_at": 1732618245000
+    },
+    {
+      "id": "01JDGG1Y8GEX90HRBG65QCY58B",
+      "name": "NS-BE44-9855",
+      "model": "ナイトシート ブラックエディション",
+      "active": false,
+      "registered_at": 1732499274000,
+      "total_distance": 174,
+      "total_distance_updated_at": 1732594201000
+    },
+    {
+      "id": "01JDGG7860A965P9Y06WE9X4CG",
+      "name": "LL-06-7409",
+      "model": "LiteLine",
+      "active": false,
+      "registered_at": 1732499448000,
+      "total_distance": 213,
+      "total_distance_updated_at": 1732571186000
+    },
+    {
+      "id": "01JDGJBGR869BEHSKVV3XWGD1Y",
+      "name": "IC-LX38-8257",
+      "model": "インペリアルクラフト LUXE",
+      "active": false,
+      "registered_at": 1732501685000,
+      "total_distance": 232,
+      "total_distance_updated_at": 1732596143000
+    },
+    {
+      "id": "01JDGJVMC86FW9DBNSWAF2N09Q",
+      "name": "FC-P18-6994",
+      "model": "フレックスコンフォート PRO",
+      "active": false,
+      "registered_at": 1732502213000,
+      "total_distance": 21,
+      "total_distance_updated_at": 1732592568000
+    },
+    {
+      "id": "01JDGKAE0GFR1NHYJARFMWP4G0",
+      "name": "ES-08-3538",
+      "model": "EasySit",
+      "active": false,
+      "registered_at": 1732502698000,
+      "total_distance": 97,
+      "total_distance_updated_at": 1732608285000
+    },
+    {
+      "id": "01JDGMMRG89WYRMRXTX1RSYY2N",
+      "name": "EC-II12-8811",
+      "model": "エルゴクレスト II",
+      "active": false,
+      "registered_at": 1732504085000,
+      "total_distance": 66,
+      "total_distance_updated_at": 1732587427000
+    },
+    {
+      "id": "01JDGNYS7GV7R7KY9EQ82ZZ5YA",
+      "name": "BP-23-518",
+      "model": "BalancePro",
+      "active": false,
+      "registered_at": 1732505462000,
+      "total_distance": 123,
+      "total_distance_updated_at": 1732633401000
+    },
+    {
+      "id": "01JDGNZPH0NEMXQ92XQ6GX88K5",
+      "name": "VC-S50-9677",
+      "model": "ヴァーチェア SUPREME",
+      "active": false,
+      "registered_at": 1732505492000,
+      "total_distance": 77,
+      "total_distance_updated_at": 1732561507000
+    },
+    {
+      "id": "01JDGP1E68X1036QJ01AA0DED5",
+      "name": "ZB-A53-3003",
+      "model": "ゼノバース ALPHA",
+      "active": false,
+      "registered_at": 1732505549000,
+      "total_distance": 253,
+      "total_distance_updated_at": 1732561974000
+    },
+    {
+      "id": "01JDGQ2WG839FE9AB05G2ZZX9Z",
+      "name": "SF-01-7047",
+      "model": "スピンフレーム 01",
+      "active": false,
+      "registered_at": 1732506645000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGQ9N9R7EQFNJWDNF4J1PYX",
+      "name": "CB-09-6081",
+      "model": "ComfortBasic",
+      "active": false,
+      "registered_at": 1732506867000,
+      "total_distance": 127,
+      "total_distance_updated_at": 1732615084000
+    },
+    {
+      "id": "01JDGQCA8G5YGJBS3VC9CWAH85",
+      "name": "LT-34-1615",
+      "model": "LuxeThrone",
+      "active": false,
+      "registered_at": 1732506954000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGR65D8ETP0QKTXGQE83K6H",
+      "name": "LL-06-1745",
+      "model": "LiteLine",
+      "active": false,
+      "registered_at": 1732507801000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGR8HJRD2ZKX8S95HZD6MJW",
+      "name": "SS-11-9661",
+      "model": "StyleSit",
+      "active": false,
+      "registered_at": 1732507879000,
+      "total_distance": 384,
+      "total_distance_updated_at": 1732610968000
+    },
+    {
+      "id": "01JDGSMCX0T1PQ6SN4PV7BZPG3",
+      "name": "LL-06-6348",
+      "model": "LiteLine",
+      "active": false,
+      "registered_at": 1732509316000,
+      "total_distance": 109,
+      "total_distance_updated_at": 1732562811000
+    },
+    {
+      "id": "01JDGVF9NGKM3J327NKMFQBT0P",
+      "name": "ES-RG40-9513",
+      "model": "エコシート リジェネレイト",
+      "active": false,
+      "registered_at": 1732511246000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGVNB10C3F1XDRDCEQVWN3A",
+      "name": "PU-46-4742",
+      "model": "Phoenix Ultra",
+      "active": false,
+      "registered_at": 1732511444000,
+      "total_distance": 251,
+      "total_distance_updated_at": 1732580971000
+    },
+    {
+      "id": "01JDGW0CHG4KP6RDB8GG8YYXVQ",
+      "name": "LC-48-4217",
+      "model": "Legacy Chair",
+      "active": false,
+      "registered_at": 1732511806000,
+      "total_distance": 263,
+      "total_distance_updated_at": 1732599926000
+    },
+    {
+      "id": "01JDGW2D00GWZDCKCJSXMZBRYQ",
+      "name": "AS-LT02-4826",
+      "model": "エアシェル ライト",
+      "active": false,
+      "registered_at": 1732511872000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGWCH70CTHBW0FCTEV5TYEY",
+      "name": "LT-34-1716",
+      "model": "LuxeThrone",
+      "active": false,
+      "registered_at": 1732512204000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDGXEYS0S4ATK7V189P9SCMK",
+      "name": "PE-X129-296",
+      "model": "プロゲーマーエッジ X1",
+      "active": false,
+      "registered_at": 1732513332000,
+      "total_distance": 121,
+      "total_distance_updated_at": 1732588326000
+    },
+    {
+      "id": "01JDGY3B40ZQCKDJA11378RR1H",
+      "name": "TZ-PL51-7405",
+      "model": "匠座 PRO LIMITED",
+      "active": false,
+      "registered_at": 1732514000000,
+      "total_distance": 346,
+      "total_distance_updated_at": 1732625122000
+    },
+    {
+      "id": "01JDGYZW6R57APE4Z00CP9TRRF",
+      "name": "PE-X129-9812",
+      "model": "プロゲーマーエッジ X1",
+      "active": false,
+      "registered_at": 1732514935000,
+      "total_distance": 56,
+      "total_distance_updated_at": 1732560438000
+    },
+    {
+      "id": "01JDH0RZBGZFRNFM79N1SSM99A",
+      "name": "AG-54-6220",
+      "model": "Aurora Glow",
+      "active": false,
+      "registered_at": 1732516806000,
+      "total_distance": 166,
+      "total_distance_updated_at": 1732610549000
+    },
+    {
+      "id": "01JDH20VQ8VNMF4D1SSS3MDHWE",
+      "name": "SS-11-281",
+      "model": "StyleSit",
+      "active": false,
+      "registered_at": 1732518113000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDH31AS8WV49A023FB4P8FBX",
+      "name": "LL-06-783",
+      "model": "LiteLine",
+      "active": false,
+      "registered_at": 1732519177000,
+      "total_distance": 58,
+      "total_distance_updated_at": 1732600090000
+    },
+    {
+      "id": "01JDH393T09RCSDQXN9C192SMG",
+      "name": "AG-54-8766",
+      "model": "Aurora Glow",
+      "active": false,
+      "registered_at": 1732519432000,
+      "total_distance": 58,
+      "total_distance_updated_at": 1732622939000
+    },
+    {
+      "id": "01JDH4KR28FBNHZY6YSQZ5B5TT",
+      "name": "SG-S120-3530",
+      "model": "ストリームギア S1",
+      "active": false,
+      "registered_at": 1732520829000,
+      "total_distance": 104,
+      "total_distance_updated_at": 1732608827000
+    },
+    {
+      "id": "01JDH4S2Z0ZJ4Z0967Y7DY5TVR",
+      "name": "ES-RG40-9085",
+      "model": "エコシート リジェネレイト",
+      "active": false,
+      "registered_at": 1732521004000,
+      "total_distance": 410,
+      "total_distance_updated_at": 1732562378000
+    },
+    {
+      "id": "01JDH4TFWG7DGM6K56726PT54N",
+      "name": "CB-09-894",
+      "model": "ComfortBasic",
+      "active": false,
+      "registered_at": 1732521050000,
+      "total_distance": 289,
+      "total_distance_updated_at": 1732620247000
+    },
+    {
+      "id": "01JDH5K20RZAJBHGSPD9JFVN6M",
+      "name": "SG-S120-9750",
+      "model": "ストリームギア S1",
+      "active": false,
+      "registered_at": 1732521855000,
+      "total_distance": 77,
+      "total_distance_updated_at": 1732593266000
+    },
+    {
+      "id": "01JDH6951RR467D8V8ACW8XR3H",
+      "name": "ZC-36-4520",
+      "model": "ZenComfort",
+      "active": false,
+      "registered_at": 1732522579000,
+      "total_distance": 362,
+      "total_distance_updated_at": 1732584733000
+    },
+    {
+      "id": "01JDH6CDHGJAJ2GWESA94B4Q9Z",
+      "name": "MC-R30-4269",
+      "model": "モーションチェア RISE",
+      "active": false,
+      "registered_at": 1732522686000,
+      "total_distance": 87,
+      "total_distance_updated_at": 1732577133000
+    },
+    {
+      "id": "01JDH7ABHRJVN26B2JMB647AD8",
+      "name": "LA-C49-7585",
+      "model": "ルミナスエアクラウン",
+      "active": false,
+      "registered_at": 1732523667000,
+      "total_distance": 222,
+      "total_distance_updated_at": 1732616608000
+    },
+    {
+      "id": "01JDH7GNPGWHN8KCW3NYZNJ9C9",
+      "name": "BS-PL04-9798",
+      "model": "ベーシックスツール プラス",
+      "active": false,
+      "registered_at": 1732523874000,
+      "total_distance": 115,
+      "total_distance_updated_at": 1732631930000
+    },
+    {
+      "id": "01JDH9GQG880DZCRJ060703DTG",
+      "name": "ES-RG40-8130",
+      "model": "エコシート リジェネレイト",
+      "active": false,
+      "registered_at": 1732525973000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHB13BG62ZW5ZFCJ2YC9YH0",
+      "name": "BP-23-5899",
+      "model": "BalancePro",
+      "active": false,
+      "registered_at": 1732527558000,
+      "total_distance": 163,
+      "total_distance_updated_at": 1732636438000
+    },
+    {
+      "id": "01JDHBC3WR8WY7YR990CPZ2N16",
+      "name": "LA-C49-2201",
+      "model": "ルミナスエアクラウン",
+      "active": false,
+      "registered_at": 1732527919000,
+      "total_distance": 147,
+      "total_distance_updated_at": 1732558507000
+    },
+    {
+      "id": "01JDHD164GPKBEX1DEGX6S6EPR",
+      "name": "GA-31-2133",
+      "model": "雅楽座",
+      "active": false,
+      "registered_at": 1732529658000,
+      "total_distance": 646,
+      "total_distance_updated_at": 1732632554000
+    },
+    {
+      "id": "01JDHDZSM8TF6THD8MWRQTR8P3",
+      "name": "US-X37-7956",
+      "model": "アルティマシート X",
+      "active": false,
+      "registered_at": 1732530661000,
+      "total_distance": 63,
+      "total_distance_updated_at": 1732584953000
+    },
+    {
+      "id": "01JDHE4D30APFK1ZSVMNT9FCZE",
+      "name": "ZC-36-1437",
+      "model": "ZenComfort",
+      "active": false,
+      "registered_at": 1732530812000,
+      "total_distance": 138,
+      "total_distance_updated_at": 1732615667000
+    },
+    {
+      "id": "01JDHFEDT89JEZ2Z2PTBFC9CDP",
+      "name": "RZ-07-903",
+      "model": "リラックス座",
+      "active": false,
+      "registered_at": 1732532189000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHGCPJ8SG27A2V9T98HEKA2",
+      "name": "PS-Z19-6434",
+      "model": "プレイスタイル Z",
+      "active": false,
+      "registered_at": 1732533181000,
+      "total_distance": 290,
+      "total_distance_updated_at": 1732624433000
+    },
+    {
+      "id": "01JDHGHDY0V1MFDJQJG11ES4W9",
+      "name": "AF-EZ15-9888",
+      "model": "エアフロー EZ",
+      "active": false,
+      "registered_at": 1732533336000,
+      "total_distance": 241,
+      "total_distance_updated_at": 1732574843000
+    },
+    {
+      "id": "01JDHGZ4D8SX8B2CXHJWGTECDQ",
+      "name": "BP-23-4820",
+      "model": "BalancePro",
+      "active": false,
+      "registered_at": 1732533785000,
+      "total_distance": 197,
+      "total_distance_updated_at": 1732563705000
+    },
+    {
+      "id": "01JDHH7FZRPGPNJN7TXA5F7TGG",
+      "name": "FC-P18-2082",
+      "model": "フレックスコンフォート PRO",
+      "active": false,
+      "registered_at": 1732534059000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHJ0MNRHBW8SX79CH0C9DPJ",
+      "name": "SL-GX32-9605",
+      "model": "スリムライン GX",
+      "active": false,
+      "registered_at": 1732534883000,
+      "total_distance": 25,
+      "total_distance_updated_at": 1732577803000
+    },
+    {
+      "id": "01JDHKS3A843HJAVM6JWWWZ8DQ",
+      "name": "RZ-07-2762",
+      "model": "リラックス座",
+      "active": false,
+      "registered_at": 1732536733000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHMWWTG90NYQWJXY3DTKVXA",
+      "name": "SF-01-501",
+      "model": "スピンフレーム 01",
+      "active": false,
+      "registered_at": 1732537906000,
+      "total_distance": 213,
+      "total_distance_updated_at": 1732624634000
+    },
+    {
+      "id": "01JDHMZBXRMM45M10WMNR4EEZ3",
+      "name": "ES-RG40-5712",
+      "model": "エコシート リジェネレイト",
+      "active": false,
+      "registered_at": 1732537987000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHNCZF8NERVS4JQ6VG3BF3E",
+      "name": "SS-R39-7634",
+      "model": "ステルスシート ROGUE",
+      "active": false,
+      "registered_at": 1732538433000,
+      "total_distance": 188,
+      "total_distance_updated_at": 1732592225000
+    },
+    {
+      "id": "01JDHRZW7GPADFNP0VED7Y36KD",
+      "name": "PA-Z28-3464",
+      "model": "プレミアムエアチェア ZETA",
+      "active": false,
+      "registered_at": 1732542198000,
+      "total_distance": 301,
+      "total_distance_updated_at": 1732623708000
+    },
+    {
+      "id": "01JDHSK3F0G6XXHKRC0HG191TJ",
+      "name": "FG-C24-5590",
+      "model": "風雅（ふうが）チェア",
+      "active": false,
+      "registered_at": 1732542828000,
+      "total_distance": 102,
+      "total_distance_updated_at": 1732566260000
+    },
+    {
+      "id": "01JDHT2QF0VND31ZCFWE9RDZFQ",
+      "name": "FC-CR27-7762",
+      "model": "フューチャーチェア CORE",
+      "active": false,
+      "registered_at": 1732543340000,
+      "total_distance": 242,
+      "total_distance_updated_at": 1732611417000
+    },
+    {
+      "id": "01JDHT62WGS4XFDQPBRKC69TPN",
+      "name": "RZ-07-7355",
+      "model": "リラックス座",
+      "active": false,
+      "registered_at": 1732543450000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHWCTJ0W0RMEW06T75QRER0",
+      "name": "IG-V42-5026",
+      "model": "インフィニティ GEAR V",
+      "active": false,
+      "registered_at": 1732545768000,
+      "total_distance": 0
+    },
+    {
+      "id": "01JDHWSNP8WWQ4KG69729FQB8A",
+      "name": "IG-V42-4177",
+      "model": "インフィニティ GEAR V",
+      "active": false,
+      "registered_at": 1732546189000,
+      "total_distance": 0
+    }
+  ]
+}

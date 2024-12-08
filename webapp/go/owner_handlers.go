@@ -1,9 +1,11 @@
 package main
 
 import (
+	"cmp"
 	"database/sql"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -286,6 +288,10 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	// 		writeError(w, http.StatusInternalServerError, err)
 	// 		return
 	// 	}
+
+	slices.SortStableFunc(chairDetails, func(i, j chairWithDetail) int {
+		return cmp.Compare(i.ID, j.ID)
+	})
 
 	res := ownerGetChairResponse{}
 	for _, chair := range chairDetails {
