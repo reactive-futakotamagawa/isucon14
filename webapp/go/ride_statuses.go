@@ -80,6 +80,7 @@ func (h *apiHandler) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.T
 // SELECT * FROM ride_statuses WHERE ride_id = ? AND app_sent_at IS NULL ORDER BY created_at ASC LIMIT 1
 func (m *rideStatusManager) findRideStatusYetSentByApp(ctx context.Context, rideID string) (*RideStatus, error) {
 	rideStatuses, err := m.scache.Get(ctx, rideID)
+	slog.InfoContext(ctx, "retrieved ride statuses from cache", len(rideStatuses))
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +89,7 @@ func (m *rideStatusManager) findRideStatusYetSentByApp(ctx context.Context, ride
 			return &rideStatus, nil
 		}
 	}
+	slog.InfoContext(ctx, "no matching ride status for app with rideID", rideID)
 	return nil, errorNoMatchingRideStatus
 }
 
@@ -99,6 +101,7 @@ func (h *apiHandler) findRideStatusYetSentByApp(ctx context.Context, _tx *sqlx.T
 // SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1
 func (m *rideStatusManager) findRideStatusYetSentByChair(ctx context.Context, rideID string) (*RideStatus, error) {
 	rideStatuses, err := m.scache.Get(ctx, rideID)
+	slog.InfoContext(ctx, "retrieved ride statuses from cache", len(rideStatuses))
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +110,7 @@ func (m *rideStatusManager) findRideStatusYetSentByChair(ctx context.Context, ri
 			return &rideStatus, nil
 		}
 	}
+	slog.InfoContext(ctx, "no matching ride status for chair with rideID", rideID)
 	return nil, errorNoMatchingRideStatus
 }
 
@@ -118,10 +122,12 @@ func (h *apiHandler) findRideStatusYetSentByChair(ctx context.Context, tx *sqlx.
 // SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1
 func (m *rideStatusManager) getLatestRideStatus(ctx context.Context, rideID string) (string, error) {
 	rideStatuses, err := m.scache.Get(ctx, rideID)
+	slog.InfoContext(ctx, "retrieved ride statuses from cache", len(rideStatuses))
 	if err != nil {
 		return "", err
 	}
 	if len(rideStatuses) == 0 {
+		slog.InfoContext(ctx, "no matching ride status with rideID", rideID)
 		return "", errorNoMatchingRideStatus
 	}
 	return rideStatuses[len(rideStatuses)-1].Status, nil
