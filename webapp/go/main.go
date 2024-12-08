@@ -5,6 +5,11 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	"github.com/kaz/pprotein/integration/standalone"
 	"io"
 	"log"
 	"log/slog"
@@ -13,13 +18,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
-	"github.com/kaz/pprotein/integration/standalone"
 )
 
 // var db *sqlx.DB
@@ -74,8 +72,13 @@ func setup() http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
+
+	dbOnly := os.Getenv("DB_ONLY")
+	if dbOnly == "1" {
+		mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
+		return mux
+	}
 	mux.HandleFunc("POST /api/initialize", h.postInitialize)
-	mux.HandleFunc("POST /api/db/initialize", h.dbInitialize)
 
 	// app handlers
 	{
@@ -216,11 +219,6 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 	h.paymentGatewayURL = req.PaymentServer
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
-
-	// 5秒後にプログラム終了
-	time.AfterFunc(5*time.Second, func() {
-		os.Exit(5)
-	})
 }
 
 type Coordinate struct {
