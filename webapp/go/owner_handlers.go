@@ -226,6 +226,9 @@ func (h *apiHandler) ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chairLocationsMap := make(map[string][]ChairLocation, len(chairLocations))
+	for _, chair := range chairs {
+		chairLocationsMap[chair.ID] = []ChairLocation{}
+	}
 	for _, chairLocation := range chairLocations {
 		if _, ok := chairLocationsMap[chairLocation.ChairID]; !ok {
 			chairLocationsMap[chairLocation.ChairID] = []ChairLocation{}
