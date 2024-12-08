@@ -164,38 +164,36 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
-	// サーバー2のdbInitializeにリクエストを転送
-	server2URL := "http://192.168.0.12:8080/api/db/initialize"
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to read request body for server2: %w", err))
-		return
-	}
-	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-	server2Req, err := http.NewRequestWithContext(ctx, "POST", server2URL, bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to create request to server2: %w", err))
-		return
-	}
-	server2Req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
-
-	client := &http.Client{}
-	server2Resp, err := client.Do(server2Req)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to communicate with server2: %w", err))
-		return
-	}
-	defer server2Resp.Body.Close()
-
-	if server2Resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(server2Resp.Body)
-		writeError(w, server2Resp.StatusCode, fmt.Errorf("server2 returned status code %d: %s", server2Resp.StatusCode, string(body)))
+	// サーバー2に dbInitialize をリクエスト
+	if err := forwardDbInitializeRequest(req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to forward to dbInitialize: %w", err))
 		return
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+}
+
+func forwardDbInitializeRequest(paymentServer string) error {
+	forwardRequest := postInitializeRequest{
+		PaymentServer: paymentServer,
+	}
+	body, err := json.Marshal(forwardRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post("http://192.168.0.12:8080/api/db/initialize", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to send request to dbInitialize: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("dbInitialize returned non-200 status: %d, body: %s", resp.StatusCode, string(responseBody))
+	}
+
+	return nil
 }
 
 func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
