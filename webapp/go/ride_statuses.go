@@ -17,7 +17,7 @@ type rideStatusManager struct {
 
 var errorNoMatchingRideStatus = errors.New("no matching ride status")
 
-func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
+func newRideStatusManager(ctx context.Context, db *sqlx.DB) (*rideStatusManager, error) {
 	replace := func(ctx context.Context, rideID string) ([]RideStatus, error) {
 		slog.InfoContext(ctx, "update cache for rideID", rideID)
 		var rideStatuses []RideStatus
@@ -31,12 +31,18 @@ func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	scache.Purge()
+	var rideStatuses []RideStatus
+	if err := db.Select(&rideStatuses, "SELECT * FROM ride_statuses"); err != nil {
+		return nil, err
+	}
+	for _, rideStatus := range rideStatuses {
+		scache.Notify(ctx, rideStatus.RideID)
+	}
 	return &rideStatusManager{scache: scache}, nil
 }
 
-func (h *apiHandler) initRideStatusManager() error {
-	rideStatus, err := newRideStatusManager(h.db)
+func (h *apiHandler) initRideStatusManager(ctx context.Context) error {
+	rideStatus, err := newRideStatusManager(ctx, h.db)
 	if err != nil {
 		return err
 	}

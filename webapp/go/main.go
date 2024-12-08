@@ -177,7 +177,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.initRideStatusManager(); err != nil {
+	if err := h.initRideStatusManager(ctx); err != nil {
 		slog.Error("failed to initialize ride status manager", err)
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -227,7 +227,7 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
-	if err := h.initRideStatusManager(); err != nil {
+	if err := h.initRideStatusManager(ctx); err != nil {
 		slog.Error("failed to initialize ride status manager", err)
 		writeError(w, http.StatusInternalServerError, err)
 		return
