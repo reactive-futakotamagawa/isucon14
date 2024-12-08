@@ -182,7 +182,7 @@ func forwardDbInitializeRequest(paymentServer string) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := http.Post("http://192.168.0.12:8080/api/db/initialize", "application/json", bytes.NewReader(body))
+	resp, err := http.Post("http://192.168.0.13:8080/api/db/initialize", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to send request to dbInitialize: %w", err)
 	}
