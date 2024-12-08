@@ -117,7 +117,7 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		_, err := tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)`, chair.ID, 0)
+		_, err := tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, total_distance) VALUES (?, ?)`, chair.ID, -2)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
