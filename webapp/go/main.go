@@ -178,12 +178,12 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 			}
 			lastTotalDistance, ok := chairTotalDistanceMap[location.ChairID]
 			if !ok {
-				lastTotalDistance = TotalDistance{Distance: 0}
+				lastTotalDistance = TotalDistance{TotalDistance: 0}
 			}
 			chairTotalDistanceMap[location.ChairID] = TotalDistance{
-				Distance:  abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.Distance,
-				ChairID:   location.ChairID,
-				CreatedAt: location.CreatedAt,
+				TotalDistance: abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude) + lastTotalDistance.TotalDistance,
+				ChairID:       location.ChairID,
+				CreatedAt:     location.CreatedAt,
 			}
 		}
 
@@ -193,7 +193,7 @@ func (h *apiHandler) postInitialize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(allTotalDistances) > 0 {
-			_, err = h.db.NamedExecContext(ctx, "INSERT INTO chair_total_distance (chair_id, total_distance, created_at) VALUES (:chair_id, :distance, :created_at)", allTotalDistances)
+			_, err = h.db.NamedExecContext(ctx, "INSERT INTO chair_total_distance (chair_id, total_distance, created_at) VALUES (:chair_id, :total_distance, :created_at)", allTotalDistances)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return

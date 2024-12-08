@@ -130,13 +130,13 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		lastTotalDistance = &TotalDistance{
-			ChairID:  chair.ID,
-			Distance: 0,
+			ChairID:       chair.ID,
+			TotalDistance: 0,
 		}
 	}
 
 	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, distance) VALUES (?, ?)`,
-		chair.ID, lastTotalDistance.Distance+int(abs(lastLocation.Latitude-req.Latitude)+abs(lastLocation.Longitude-req.Longitude)))
+		chair.ID, lastTotalDistance.TotalDistance+int(abs(lastLocation.Latitude-req.Latitude)+abs(lastLocation.Longitude-req.Longitude)))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
