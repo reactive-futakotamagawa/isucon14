@@ -85,3 +85,9 @@ type Coupon struct {
 	CreatedAt time.Time `h.db:"created_at"`
 	UsedBy    *string   `h.db:"used_by"`
 }
+
+type TotalDistance struct {
+	ChairID   string    `h.db:"chair_id"`
+	Distance  int       `h.db:"distance"`
+	CreatedAt time.Time `h.db:"created_at"`
+}

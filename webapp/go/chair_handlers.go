@@ -111,6 +111,37 @@ func (h *apiHandler) chairPostCoordinate(w http.ResponseWriter, r *http.Request)
 	}
 	defer tx.Rollback()
 
+	lastLocation := &ChairLocation{}
+	if err := tx.GetContext(ctx, lastLocation, `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`, chair.ID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		lastLocation = &ChairLocation{
+			Latitude:  0,
+			Longitude: 0,
+		}
+	}
+
+	lastTotalDistance := &TotalDistance{}
+	if err := tx.GetContext(ctx, lastTotalDistance, `SELECT * FROM chair_total_distance WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`, chair.ID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		lastTotalDistance = &TotalDistance{
+			ChairID:  chair.ID,
+			Distance: 0,
+		}
+	}
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO chair_total_distance (chair_id, distance) VALUES (?, ?)`,
+		chair.ID, lastTotalDistance.Distance+int(abs(lastLocation.Latitude-req.Latitude)+abs(lastLocation.Longitude-req.Longitude)))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	chairLocationID := ulid.Make().String()
 	if _, err := tx.ExecContext(
 		ctx,
