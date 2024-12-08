@@ -222,6 +222,7 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 	h.paymentGatewayURL = req.PaymentServer
 
 	if err := h.initRideStatusManager(); err != nil {
+		slog.Error("failed to initialize ride status manager", err)
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

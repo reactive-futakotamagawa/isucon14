@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -124,7 +125,11 @@ func (m *rideStatusManager) getLatestRideStatus(ctx context.Context, rideID stri
 	return rideStatuses[len(rideStatuses)-1].Status, nil
 }
 
-func (h *apiHandler) getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (string, error) {
+func (h *apiHandler) getLatestRideStatus(ctx context.Context, _tx executableGet, rideID string) (string, error) {
+	if h.rideStatus == nil {
+		slog.ErrorContext(ctx, "rideStatusManager is not initialized")
+		return "", errors.New("rideStatusManager is not initialized")
+	}
 	status, err := h.rideStatus.getLatestRideStatus(ctx, rideID)
 	return status, err
 }
