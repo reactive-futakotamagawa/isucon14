@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,6 +13,8 @@ import (
 type rideStatusManager struct {
 	scache *sc.Cache[string, []RideStatus]
 }
+
+var errorNoMatchingRideStatus = errors.New("no matching ride status")
 
 func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
 	replace := func(ctx context.Context, rideID string) ([]RideStatus, error) {
@@ -38,41 +41,90 @@ func (h *apiHandler) initRideStatusManager() error {
 	return nil
 }
 
-func (h *apiHandler) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
+func (m *rideStatusManager) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
 	_, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), rideID, status)
+	// FIXME: ここはtx.Commitと同時にやってほしい
+	m.scache.Notify(ctx, rideID)
+	return err
+}
+
+func (h *apiHandler) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
+	return h.rideStatus.createRideStatus(ctx, tx, rideID, status)
+}
+
+func (m *rideStatusManager) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) error {
+	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rideID)
+	// FIXME
+	m.scache.Notify(ctx, rideID)
 	return err
 }
 
 func (h *apiHandler) updateRideStatusAppSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) error {
-	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rideID)
+	return h.rideStatus.updateRideStatusAppSentAt(ctx, tx, rideID)
+}
+
+func (m *rideStatusManager) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) error {
+	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rideID)
+	// FIXME
+	m.scache.Notify(ctx, rideID)
 	return err
 }
 
 func (h *apiHandler) updateRideStatusChairSentAt(ctx context.Context, tx *sqlx.Tx, rideID string) error {
-	_, err := tx.ExecContext(ctx, "UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rideID)
-	return err
+	return h.rideStatus.updateRideStatusChairSentAt(ctx, tx, rideID)
 }
 
-func (h *apiHandler) findRideStatusYetSentByApp(ctx context.Context, tx *sqlx.Tx, rideID string) (*RideStatus, error) {
-	var yetSentRideStatus RideStatus
-	if err := tx.GetContext(ctx, &yetSentRideStatus, "SELECT * FROM ride_statuses WHERE ride_id = ? AND app_sent_at IS NULL ORDER BY created_at ASC LIMIT 1", rideID); err != nil {
+// SELECT * FROM ride_statuses WHERE ride_id = ? AND app_sent_at IS NULL ORDER BY created_at ASC LIMIT 1
+func (m *rideStatusManager) findRideStatusYetSentByApp(ctx context.Context, rideID string) (*RideStatus, error) {
+	rideStatuses, err := m.scache.Get(ctx, rideID)
+	if err != nil {
 		return nil, err
 	}
-	return &yetSentRideStatus, nil
+	for _, rideStatus := range rideStatuses {
+		if rideStatus.AppSentAt == nil {
+			return &rideStatus, nil
+		}
+	}
+	return nil, errorNoMatchingRideStatus
+}
+
+func (h *apiHandler) findRideStatusYetSentByApp(ctx context.Context, _tx *sqlx.Tx, rideID string) (*RideStatus, error) {
+	rs, err := h.rideStatus.findRideStatusYetSentByApp(ctx, rideID)
+	return rs, err
+}
+
+// SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1
+func (m *rideStatusManager) findRideStatusYetSentByChair(ctx context.Context, rideID string) (*RideStatus, error) {
+	rideStatuses, err := m.scache.Get(ctx, rideID)
+	if err != nil {
+		return nil, err
+	}
+	for _, rideStatus := range rideStatuses {
+		if rideStatus.ChairSentAt == nil {
+			return &rideStatus, nil
+		}
+	}
+	return nil, errorNoMatchingRideStatus
 }
 
 func (h *apiHandler) findRideStatusYetSentByChair(ctx context.Context, tx *sqlx.Tx, rideID string) (*RideStatus, error) {
-	var yetSentRideStatus RideStatus
-	if err := tx.GetContext(ctx, &yetSentRideStatus, "SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1", rideID); err != nil {
-		return nil, err
+	rs, err := h.rideStatus.findRideStatusYetSentByChair(ctx, rideID)
+	return rs, err
+}
+
+// SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1
+func (m *rideStatusManager) getLatestRideStatus(ctx context.Context, rideID string) (string, error) {
+	rideStatuses, err := m.scache.Get(ctx, rideID)
+	if err != nil {
+		return "", err
 	}
-	return &yetSentRideStatus, nil
+	if len(rideStatuses) == 0 {
+		return "", errorNoMatchingRideStatus
+	}
+	return rideStatuses[len(rideStatuses)-1].Status, nil
 }
 
 func (h *apiHandler) getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (string, error) {
-	status := ""
-	if err := tx.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
-		return "", err
-	}
-	return status, nil
+	status, err := h.rideStatus.getLatestRideStatus(ctx, rideID)
+	return status, err
 }

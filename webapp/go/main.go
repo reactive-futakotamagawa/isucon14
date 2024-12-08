@@ -221,6 +221,11 @@ func (h *apiHandler) dbInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	h.paymentGatewayURL = req.PaymentServer
 
+	if err := h.initRideStatusManager(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
 
