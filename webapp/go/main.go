@@ -133,6 +133,7 @@ type postInitializeResponse struct {
 type apiHandler struct {
 	db                *sqlx.DB
 	paymentGatewayURL string
+	rideStatus        *rideStatusManager
 }
 
 func newHandler(db *sqlx.DB) *apiHandler {
@@ -140,6 +141,8 @@ func newHandler(db *sqlx.DB) *apiHandler {
 		db: db,
 		// dummy
 		paymentGatewayURL: "http://localhost:12345",
+		// NOTE: ここではrideStatusを初期化していない
+		rideStatus: nil,
 	}
 }
 

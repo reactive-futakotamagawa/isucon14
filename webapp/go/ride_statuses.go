@@ -2,10 +2,41 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/motoki317/sc"
 	"github.com/oklog/ulid/v2"
 )
+
+type rideStatusManager struct {
+	scache *sc.Cache[string, []RideStatus]
+}
+
+func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
+	replace := func(ctx context.Context, rideID string) ([]RideStatus, error) {
+		var rideStatuses []RideStatus
+		if err := db.SelectContext(ctx, &rideStatuses, "SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at ASC", rideID); err != nil {
+			return nil, err
+		}
+		return rideStatuses, nil
+	}
+	// FIXME: 数字はテキトー
+	scache, err := sc.New[string, []RideStatus](replace, 1*time.Second, 2*time.Second, sc.WithLRUBackend(1000))
+	if err != nil {
+		return nil, err
+	}
+	return &rideStatusManager{scache: scache}, nil
+}
+
+func (h *apiHandler) initRideStatusManager() error {
+	rideStatus, err := newRideStatusManager(h.db)
+	if err != nil {
+		return err
+	}
+	h.rideStatus = rideStatus
+	return nil
+}
 
 func (h *apiHandler) createRideStatus(ctx context.Context, tx *sqlx.Tx, rideID string, status string) error {
 	_, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), rideID, status)
