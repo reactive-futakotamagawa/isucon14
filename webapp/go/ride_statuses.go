@@ -25,7 +25,7 @@ func newRideStatusManager(db *sqlx.DB) (*rideStatusManager, error) {
 		return rideStatuses, nil
 	}
 	// FIXME: 数字はテキトー
-	scache, err := sc.New[string, []RideStatus](replace, 1*time.Second, 2*time.Second, sc.WithLRUBackend(1000))
+	scache, err := sc.New[string, []RideStatus](replace, 1*time.Minute, 2*time.Minute, sc.WithLRUBackend(1000))
 	if err != nil {
 		return nil, err
 	}
