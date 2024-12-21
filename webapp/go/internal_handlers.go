@@ -21,7 +21,7 @@ func (h *apiHandler) internalGetMatching(w http.ResponseWriter, r *http.Request)
 	}
 
 	var chairID string
-	err := h.db2.GetContext(ctx, &chairID, `
+	err := h.db.GetContext(ctx, &chairID, `
 WITH near_chair_id AS (
 	SELECT chair_id
 	FROM (
