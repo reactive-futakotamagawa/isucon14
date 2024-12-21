@@ -84,7 +84,7 @@ func (h *apiHandler) chairAuthMiddleware(next http.Handler) http.Handler {
 		}
 		accessToken := c.Value
 		// chair := &Chair{}
-		ctx = context.WithValue(ctx, cacheCtxDBKeyVal, h.db2) // ここでdb渡す！
+		ctx = context.WithValue(ctx, cacheCtxDBKeyVal, h.db) // ここでdb渡す！
 		chair, err := chairAccessTokenCache.Get(ctx, accessToken)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
