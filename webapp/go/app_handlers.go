@@ -857,6 +857,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 	latStr := r.URL.Query().Get("latitude")
 	lonStr := r.URL.Query().Get("longitude")
 	distanceStr := r.URL.Query().Get("distance")
+
 	if latStr == "" || lonStr == "" {
 		writeError(w, http.StatusBadRequest, errors.New("latitude or longitude is empty"))
 		return
@@ -892,77 +893,91 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 	}
 	defer tx.Rollback()
 
+	// **Step 1: chairsを一括取得**
 	chairs := []Chair{}
-	err = tx.tx2.SelectContext(
-		ctx,
-		&chairs,
-		`SELECT * FROM chairs`,
-	)
+	err = tx.tx2.SelectContext(ctx, &chairs, `SELECT * FROM chairs WHERE is_active = 1`)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
+	// **Step 2: chair_idに紐づくridesのステータスを一括取得**
+	rideStatuses := []struct {
+		ChairID string `db:"chair_id"`
+		Status  string `db:"status"`
+	}{}
+	err = tx.tx1.SelectContext(ctx, &rideStatuses, `
+		SELECT r.chair_id, rs.status
+		FROM rides r
+		JOIN ride_statuses rs ON r.id = rs.ride_id
+		WHERE rs.status != 'COMPLETED'
+	`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// **Step 3: 未完了のライドを持つchair_idをセットにしてスキップ対象にする**
+	skipChairs := map[string]bool{}
+	for _, rs := range rideStatuses {
+		skipChairs[rs.ChairID] = true
+	}
+
+	// **Step 4: chair_idに紐づく最新の位置情報を一括取得**
+	locations := []struct {
+		ChairID   string `db:"chair_id"`
+		Latitude  int    `db:"latitude"`
+		Longitude int    `db:"longitude"`
+	}{}
+	err = tx.tx2.SelectContext(ctx, &locations, `
+		SELECT cl.chair_id, cl.latitude, cl.longitude
+		FROM chair_locations cl
+		JOIN (
+			SELECT chair_id, MAX(created_at) AS max_created_at
+			FROM chair_locations
+			GROUP BY chair_id
+		) latest ON cl.chair_id = latest.chair_id AND cl.created_at = latest.max_created_at
+	`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// **Step 5: ChairIDをキーにしてlocationをマッピング**
+	locationMap := map[string]Coordinate{}
+	for _, loc := range locations {
+		locationMap[loc.ChairID] = Coordinate{
+			Latitude:  loc.Latitude,
+			Longitude: loc.Longitude,
+		}
+	}
+
+	// **Step 6: Nearby chairsを計算**
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairs {
-		if !chair.IsActive {
+		if skipChairs[chair.ID] {
 			continue
 		}
 
-		rides := []*Ride{}
-		if err := tx.tx1.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ? ORDER BY created_at DESC`, chair.ID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		skip := false
-		for _, ride := range rides {
-			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, err)
-				return
-			}
-			if status != "COMPLETED" {
-				skip = true
-				break
-			}
-		}
-		if skip {
+		loc, exists := locationMap[chair.ID]
+		if !exists {
 			continue
 		}
 
-		// 最新の位置情報を取得
-		chairLocation := &ChairLocation{}
-		err = tx.tx2.GetContext(
-			ctx,
-			chairLocation,
-			`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
-			chair.ID,
-		)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {
+		if calculateDistance(coordinate.Latitude, coordinate.Longitude, loc.Latitude, loc.Longitude) <= distance {
 			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
 				ID:    chair.ID,
 				Name:  chair.Name,
 				Model: chair.Model,
 				CurrentCoordinate: Coordinate{
-					Latitude:  chairLocation.Latitude,
-					Longitude: chairLocation.Longitude,
+					Latitude:  loc.Latitude,
+					Longitude: loc.Longitude,
 				},
 			})
 		}
 	}
 
 	retrievedAt := time.Now()
-
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,
 		RetrievedAt: retrievedAt.UnixMilli(),
