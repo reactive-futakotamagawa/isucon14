@@ -104,6 +104,7 @@ func setup() http.Handler {
 	dbConfig2.Net = "tcp"
 	dbConfig2.DBName = dbname2
 	dbConfig2.ParseTime = true
+	dbConfig2.InterpolateParams = true
 
 	db2, err := sqlx.Connect("mysql", dbConfig2.FormatDSN())
 	if err != nil {
