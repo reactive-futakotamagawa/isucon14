@@ -38,8 +38,6 @@ SELECT near_chair_id.chair_id
 	FROM near_chair_id
 LEFT JOIN rides ON rides.chair_id = near_chair_id.chair_id
 LEFT JOIN ride_statuses ON ride_statuses.ride_id = rides.id
-WHERE 
-	rides.chair_id IN (SELECT * FROM near_chair_id)
 GROUP BY
 	rides.chair_id
 HAVING
