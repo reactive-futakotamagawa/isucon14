@@ -9,9 +9,11 @@ import (
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func (h *apiHandler) internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tx := h.db.MustBeginTx(ctx, nil)
+	defer tx.Rollback()
 	// MEMO: 一旦最も待たせているリクエストに適当な空いている椅子マッチさせる実装とする。おそらくもっといい方法があるはず…
 	ride := &Ride{}
-	if err := h.db.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
+	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -21,7 +23,7 @@ func (h *apiHandler) internalGetMatching(w http.ResponseWriter, r *http.Request)
 	}
 
 	var chairID string
-	err := h.db.GetContext(ctx, &chairID, `
+	err := tx.GetContext(ctx, &chairID, `
 WITH near_chair_id AS (
 	SELECT chair_id
 	FROM (
@@ -34,14 +36,12 @@ WITH near_chair_id AS (
 	WHERE ranking = 1
 	ORDER BY  ABS(latitude - ?) + ABS(longitude - ?) ASC LIMIT 5
 )
-SELECT near_chair_id.chair_id
-	FROM near_chair_id
-LEFT JOIN rides ON rides.chair_id = near_chair_id.chair_id
-LEFT JOIN ride_statuses ON ride_statuses.ride_id = rides.id
-GROUP BY
-	near_chair_id.chair_id
-HAVING
-	COUNT(ride_statuses.chair_sent_at) % 6 = 0 
+SELECT r.chair_id
+FROM ride_statuses AS rs
+JOIN rides AS r ON rs.ride_id = r.id
+WHERE r.chair_id IN (SELECT chair_id FROM near_chair_id)
+GROUP BY r.id
+HAVING COUNT(rs.chair_sent_at) = 6
 LIMIT 1
 `,
 		ride.PickupLatitude, ride.PickupLongitude)
@@ -88,7 +88,12 @@ LIMIT 1
 	// 	return
 	// }
 
-	if _, err := h.db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chairID, ride.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chairID, ride.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
