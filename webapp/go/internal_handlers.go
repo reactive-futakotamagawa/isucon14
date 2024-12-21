@@ -36,12 +36,18 @@ WITH near_chair_id AS (
 	WHERE ranking = 1
 	ORDER BY  ABS(latitude - ?) + ABS(longitude - ?) ASC LIMIT 5
 )
-SELECT r.chair_id
-FROM ride_statuses AS rs
-JOIN rides AS r ON rs.ride_id = r.id
-WHERE r.chair_id IN (SELECT chair_id FROM near_chair_id)
-GROUP BY r.id
-HAVING COUNT(rs.chair_sent_at) = 6
+SELECT near_chair_id.chair_id
+FROM near_chair_id
+LEFT JOIN rides ON near_chair_id.chair_id = rides.chair_id
+WHERE rides.id IS NULL
+GROUP BY near_chair_id.chair_id
+UNION
+SELECT near_chair_id.chair_id
+FROM near_chair_id
+JOIN rides ON near_chair_id.chair_id = rides.chair_id
+JOIN ride_statuses ON rides.id = ride_statuses.ride_id
+GROUP BY rides.id
+HAVING COUNT(ride_statuses.chair_sent_at) = 6
 LIMIT 1
 `,
 		ride.PickupLatitude, ride.PickupLongitude)
