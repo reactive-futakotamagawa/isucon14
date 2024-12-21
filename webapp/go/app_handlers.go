@@ -212,7 +212,7 @@ func (h *apiHandler) appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -283,14 +283,6 @@ type executableGet interface {
 	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
-func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (string, error) {
-	status := ""
-	if err := tx.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
-		return "", err
-	}
-	return status, nil
-}
-
 func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesRequest{}
@@ -321,7 +313,7 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 
 	continuingRideCount := 0
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+		status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -346,11 +338,8 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.ExecContext(
-		ctx, "db1",
-		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "MATCHING",
-	); err != nil {
+	afterCommit, err := h.createRideStatus(ctx, tx.tx1, rideID, "MATCHING")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -428,6 +417,10 @@ func (h *apiHandler) appPostRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -535,7 +528,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+	status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -562,10 +555,7 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err = tx.ExecContext(
-		ctx, "db1",
-		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "COMPLETED")
+	afterCommit, err := h.createRideStatus(ctx, tx.tx1, rideID, "COMPLETED")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -613,6 +603,10 @@ func (h *apiHandler) appPostRideEvaluatation(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -673,11 +667,11 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	yetSentRideStatus := RideStatus{}
 	status := ""
-	if err := tx.tx1.GetContext(ctx, &yetSentRideStatus, `SELECT * FROM ride_statuses WHERE ride_id = ? AND app_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
+	yetSentRideStatus, err := h.findRideStatusYetSentByApp(ctx, tx.tx1, ride.ID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			status, err = getLatestRideStatus(ctx, tx.tx1, ride.ID)
+			status, err = h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -736,8 +730,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	afterCommit := afterCommitNop
 	if yetSentRideStatus.ID != "" {
-		_, err := tx.tx1.ExecContext(ctx, `UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
+		ac, err := h.updateRideStatusAppSentAt(ctx, tx.tx1, yetSentRideStatus.ID)
+		afterCommit = ac
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -745,6 +741,10 @@ func (h *apiHandler) appGetNotification(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := afterCommit(ctx); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -766,7 +766,7 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 	rows := []getChairStatsStruct{}
 
 	query := `
-		SELECT 
+		SELECT
 			r.id AS ride_id,
 			r.evaluation,
 			rs.status,
@@ -918,7 +918,7 @@ func (h *apiHandler) appGetNearbyChairs(w http.ResponseWriter, r *http.Request) 
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := getLatestRideStatus(ctx, tx.tx1, ride.ID)
+			status, err := h.getLatestRideStatus(ctx, tx.tx1, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
