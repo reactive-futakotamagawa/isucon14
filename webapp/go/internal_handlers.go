@@ -39,7 +39,7 @@ SELECT near_chair_id.chair_id
 LEFT JOIN rides ON rides.chair_id = near_chair_id.chair_id
 LEFT JOIN ride_statuses ON ride_statuses.ride_id = rides.id
 GROUP BY
-	rides.chair_id
+	near_chair_id.chair_id
 HAVING
 	COUNT(ride_statuses.chair_sent_at) % 6 = 0 
 LIMIT 1
